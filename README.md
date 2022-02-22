@@ -2,6 +2,7 @@
 
 - [Dépendances](#dépendances)
 - [Installation](#installation)
+- [Utilisation en submodule GIT](#utilisation-en-submodule-git)
 
 ## Dépendances
 
@@ -33,3 +34,8 @@
 ## Installation
 
 `perl Makefile.PL INSTALL_BASE=/usr/local VERSION=0.0.1`
+
+## Utilisation en submodule GIT
+
+* Si le dépôt de code est à côté : `git submodule add ../core-perl.git core`
+* Sinon : `git submodule add https://github.com/rok4/core-perl.git core`
