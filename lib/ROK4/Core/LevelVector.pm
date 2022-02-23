@@ -47,7 +47,7 @@ Describe a level in a vector pyramid.
 Using:
     (start code)
     use ROK4::Core::LevelVector;
-    use ROK4::Core::DatabaseSource;
+    use ROK4::PREGENERATION::DatabaseSource;
 
     # From values
     my $valuesLevel = ROK4::Core::LevelVector->new("VALUES",{
@@ -639,6 +639,7 @@ sub getDirsInfo {
     }
 
     my @dirs = File::Spec->splitdir($this->{dir_image});
+    # On enlève de la fin le dossier du niveau, le dossier du type de données et celui du nom de la pyramide
     pop(@dirs);pop(@dirs);pop(@dirs);
     my $dir_data = File::Spec->catdir(@dirs);
 

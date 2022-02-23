@@ -79,9 +79,6 @@ use warnings;
 use Log::Log4perl qw(:easy);
 use Data::Dumper;
 
-use ROK4::BE4::Shell;
-
-
 ################################################################################
 # Constantes
 use constant TRUE  => 1;
@@ -310,7 +307,10 @@ sub getName {
 =begin nd
 Function: exportForMntConf
 
-Export a GeoImage object as a string. Output is formated to be used in <ROK4::BE4::Node::mergeNtiff> configuration.
+Export a GeoImage object as a string. Output is formated to be used by mergeNtiff generation.
+
+Parameters:
+    useMask - boolean - Do we export mask into configuration
 
 Example:
 |    IMG completePath xmin ymax xmax ymin xres yres
@@ -318,6 +318,7 @@ Example:
 =cut
 sub exportForMntConf {
     my $this = shift;
+    my $useMask = shift;
 
     my $output = sprintf "IMG %s\t%s", $this->{completePath}, $this->{srs};
 
@@ -325,7 +326,7 @@ sub exportForMntConf {
         $this->{xmin}, $this->{ymax}, $this->{xmax}, $this->{ymin},
         $this->{xres}, $this->{yres};
         
-    if ($ROK4::BE4::Shell::USEMASK && defined $this->{maskCompletePath}) {
+    if ($useMask && defined $this->{maskCompletePath}) {
         $output .= sprintf "MSK %s\n", $this->{maskCompletePath};
     }
 
@@ -346,7 +347,7 @@ sub exportForDebug {
     
     my $export = "";
     
-    $export .= sprintf "\nObject ROK4::BE4::GeoImage :\n";
+    $export .= sprintf "\nObject ROK4::Core::GeoImage :\n";
     $export .= sprintf "\t Image path : %s\n",$this->{completePath};
     $export .= sprintf "\t Mask path : %s\n",$this->{maskCompletePath} if (defined $this->{maskCompletePath});
 

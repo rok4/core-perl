@@ -443,44 +443,6 @@ sub execute_without_return {
     return 0;
 }
 
-=begin nd
-Function: run_sql_dump
-
-Parameters (list):
-    schema_name - string - Schema name in which the file have to be execute
-    sql_file - string - SQL script to execute
-
-Return
-    0 if success, 1 if failure
-=cut
-sub run_sql_dump {
-    my $this = shift;
-    my $schema_name = shift;
-    my $sql_file = shift;
-
-    $schema_name = lc $schema_name;
-
-    local $ENV{"PGDATABASE"} = $this->{dbname};
-    local $ENV{"PGHOST"}     = $this->{host};
-    local $ENV{"PGPORT"}     = $this->{port};
-    local $ENV{"PGUSER"}     = $this->{username};
-    local $ENV{"PGPASSWORD"} = $this->{password};
-
-    my $cmd_psql = "PGOPTIONS='-c search_path=$schema_name,public' psql -v ON_ERROR_STOP=1 -q -f $sql_file";
-
-    DEBUG("Call : " . $cmd_psql);
-
-    my @logs = `$cmd_psql`;
-
-    if ( $? != 0 ) {
-        ERROR("Cannot execute the SQL script : " . $sql_file);
-        ERROR(Dumper(\@logs));
-        return 1;
-    }
-
-    return 0;
-}
-
 ####################################################################################################
 #                                          Group: Tests                                            #
 ####################################################################################################

@@ -44,6 +44,8 @@ Class: ROK4::Core::TileMatrixSet
 
 Load and store all information about a Tile Matrix Set. A Tile Matrix Set is a JSON file which describe a grid for several levels.
 
+The file have to be in the directory provided with the environment variable ROK4_TMS_DIRECTORY
+
 (see ROK4GENERATION/TileMatrixSet.png)
 
 We tell the difference between :
@@ -56,22 +58,20 @@ Using:
     (start code)
     use ROK4::Core::TileMatrixSet;
 
-    my $filepath = "/home/ign/tms/LAMB93_50cm.json";
-    my $objTMS = ROK4::Core::TileMatrixSet->new($filepath);
+    my $tms_name = "LAMB93_50cm.json";
+    my $objTMS = ROK4::Core::TileMatrixSet->new($tms_name);
 
     $objTMS->getTileMatrixCount()};      # ie 19
     $objTMS->getTileMatrix(12);          # object TileMatrix with level id = 12
     $objTMS->getSRS();                   # ie 'IGNF:LAMB93'
     $objTMS->getName();                  # ie 'LAMB93_50cm'
     $objTMS->getFile();                  # ie 'LAMB93_50cm.json'
-    $objTMS->getPath();                  # ie '/home/ign/tms/'
     (end code)
 
 Attributes:
     PATHFILENAME - string - Complete file path : /path/to/SRS_RES.json
     name - string - Basename part of PATHFILENAME : SRS_RES
     filename - string - Filename part of PATHFILENAME : SRS_RES.json
-    filepath - string - Directory part of PATHFILENAME : /path/to
 
     levelsBind - hash - Link between Tile matrix identifiants (string, the key) and order in ascending resolutions (integer, the value).
     topID - string - Higher level ID.
@@ -128,7 +128,7 @@ Constructor: new
 TileMatrixSet constructor. Bless an instance. Fill file's informations.
 
 Parameters (list):
-    pathfile - string - Path to the Tile Matrix File
+    tms_name - string - Name of the Tile Matrix File, with extension JSON or TMS or without
     acceptUntypedTMS - boolean - optional : Do we accept a TMS that is neither a quad tree nor a neares neighbour graph (default : refused)
 
 See also:
@@ -136,7 +136,7 @@ See also:
 =cut
 sub new {
     my $class = shift;
-    my $pathfile = shift;
+    my $tms_name = shift;
     my $acceptUntypedTMS = shift;
 
     $class = ref($class) || $class;
@@ -145,7 +145,6 @@ sub new {
         PATHFILENAME => undef,
         name     => undef,
         filename => undef,
-        filepath => undef,
         #
         levelsBind => undef,
         topID => undef,
@@ -162,21 +161,28 @@ sub new {
 
     bless($this, $class);
 
+    return undef if (! defined $tms_name);
 
-    # init. class
-    return undef if (! defined $pathfile);
+    if ($tms_name !~ m/\.(tms|TMS|json|JSON)$/) {
+        $tms_name = "$tms_name.json";
+    }
 
-    if (! -f $pathfile) {
-        ERROR ("File TMS doesn't exist ($pathfile)!");
+    if (! defined $ENV{ROK4_TMS_DIRECTORY}) {
+        ERROR ("Environment variable ROK4_TMS_DIRECTORY is not defined, cannot load TMS");
         return undef;
     }
 
-    # init. params
-    $this->{PATHFILENAME} = $pathfile;
-    $this->{filepath} = File::Basename::dirname($pathfile);
-    $this->{filename} = File::Basename::basename($pathfile);
-    $this->{name} = File::Basename::basename($pathfile);
+    $this->{filename} = $tms_name;
+
+    $this->{name} = $tms_name;
     $this->{name} =~ s/\.(tms|TMS|json|JSON)$//;
+
+    $this->{PATHFILENAME} = File::Spec->catfile($ENV{ROK4_TMS_DIRECTORY}, $this->{filename});
+
+    if (! -f $this->{PATHFILENAME}) {
+        ERROR(sprintf "File TMS doesn't exist (%s)!", $this->{PATHFILENAME});
+        return undef;
+    }
     
     # load
     return undef if (! $this->_load($acceptUntypedTMS));

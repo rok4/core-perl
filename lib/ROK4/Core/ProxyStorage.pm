@@ -296,7 +296,7 @@ sub copy {
             my $body;
             map_file $body, $fromPath;
             
-            my $request = HTTP::Request->new(PUT => _getEnv('ROK4_SWIFT_PUBLICURL').$resource);
+            my $request = HTTP::Request->new(PUT => $ENV{ROK4_SWIFT_PUBLICURL}.$resource);
             $request->content($body);
 
             my $try = 1;
@@ -472,18 +472,18 @@ sub copy {
             chomp($date_gmt);
             my $string_to_sign="PUT\n\n$content_type\n$date_gmt\nx-amz-copy-source:/$fromBucket/$fromObjectName\n$resource";
 
-            my $signature = Digest::SHA::hmac_sha1_base64($string_to_sign, _getEnv('ROK4_S3_SECRETKEY'));
+            my $signature = Digest::SHA::hmac_sha1_base64($string_to_sign, $ENV{ROK4_S3_SECRETKEY});
             while (length($signature) % 4) {
                 $signature .= '=';
             }
 
-            my $request = HTTP::Request->new(PUT => _getEnv('ROK4_S3_URL').$resource);
+            my $request = HTTP::Request->new(PUT => $ENV{ROK4_S3_URL}.$resource);
 
             $request->header('Host' => $S3_HOST);
             $request->header('Date' => $date_gmt);
             $request->header('Content-Type' => $content_type);
             $request->header('x-amz-copy-source' => "/$fromBucket/$fromObjectName");
-            $request->header('Authorization' => sprintf ("AWS %s:$signature", _getEnv('ROK4_S3_KEY')));
+            $request->header('Authorization' => sprintf ("AWS %s:$signature", $ENV{ROK4_S3_KEY}));
 
             my $response = _getUserAgent()->request($request, $toPath);
             if ($response->is_success) {
@@ -518,7 +518,7 @@ sub copy {
 
             my $resource = "/$containerName/$objectName";
 
-            my $request = HTTP::Request->new(GET => _getEnv('ROK4_SWIFT_PUBLICURL').$resource);
+            my $request = HTTP::Request->new(GET => $ENV{ROK4_SWIFT_PUBLICURL}.$resource);
             
             # create folder
             my $dir = File::Basename::dirname($toPath);
@@ -582,7 +582,7 @@ sub copy {
 
             my $resource = "/$fromContainer/$fromObjectName";
 
-            my $request = HTTP::Request->new(COPY => _getEnv('ROK4_SWIFT_PUBLICURL').$resource);
+            my $request = HTTP::Request->new(COPY => $ENV{ROK4_SWIFT_PUBLICURL}.$resource);
             $request->header('Destination' => "$toContainer/$toObjectName");
 
             my $try = 1;
@@ -719,7 +719,7 @@ sub getData {
 
         my $resource = "/$containerName/$objectName";
 
-        my $request = HTTP::Request->new(GET => _getEnv('ROK4_SWIFT_PUBLICURL').$resource);
+        my $request = HTTP::Request->new(GET => $ENV{ROK4_SWIFT_PUBLICURL}.$resource);
 
         if (defined $size && defined $offset) {
             $request->header('Range' => sprintf("$offset-%s", $offset + $size - 1));
@@ -841,7 +841,7 @@ sub setData {
 
         my $resource = "/$containerName/$objectName";
 
-        my $request = HTTP::Request->new(PUT => _getEnv('ROK4_SWIFT_PUBLICURL').$resource);
+        my $request = HTTP::Request->new(PUT => $ENV{ROK4_SWIFT_PUBLICURL}.$resource);
         $request->content($data);
 
         my $try = 1;
@@ -929,20 +929,20 @@ sub isPresent {
         chomp($dateValue);
         my $stringToSign = "HEAD\n\n$contentType\n$dateValue\n$resource";
 
-        my $signature = Digest::SHA::hmac_sha1_base64($stringToSign, _getEnv('ROK4_S3_SECRETKEY'));
+        my $signature = Digest::SHA::hmac_sha1_base64($stringToSign, $ENV{ROK4_S3_SECRETKEY});
         while (length($signature) % 4) {
             $signature .= '=';
         }
 
-        my $host = _getEnv('ROK4_S3_URL');
+        my $host = $ENV{ROK4_S3_URL};
         $host =~ s/^https?:\/\/(.+):[0-9]+\/?$/$1/;
 
         # set custom HTTP request header fields
-        my $request = HTTP::Request->new(HEAD => _getEnv('ROK4_S3_URL').$resource);
+        my $request = HTTP::Request->new(HEAD => $ENV{ROK4_S3_URL}.$resource);
         $request->header('Host' => $host);
         $request->header('Date' => $dateValue);
         $request->header('Content-Type' => $contentType);
-        $request->header('Authorization' => sprintf ("AWS %s:$signature", _getEnv('ROK4_S3_KEY')));
+        $request->header('Authorization' => sprintf ("AWS %s:$signature", $ENV{ROK4_S3_KEY}));
          
         my $response = _getUserAgent()->request($request);
         if ($response->is_success) {
@@ -963,7 +963,7 @@ sub isPresent {
 
         my $resource = "/$containerName/$objectName";
 
-        my $request = HTTP::Request->new(HEAD => _getEnv('ROK4_SWIFT_PUBLICURL').$resource);
+        my $request = HTTP::Request->new(HEAD => $ENV{ROK4_SWIFT_PUBLICURL}.$resource);
 
         my $try = 1;
         while ($try <= 2) {
@@ -1019,7 +1019,7 @@ sub getSize {
 
         my $resource = "/$containerName/$objectName";
 
-        my $request = HTTP::Request->new(HEAD => _getEnv('ROK4_SWIFT_PUBLICURL').$resource);
+        my $request = HTTP::Request->new(HEAD => $ENV{ROK4_SWIFT_PUBLICURL}.$resource);
 
         my $try = 1;
         while ($try <= 2) {
@@ -1062,20 +1062,20 @@ sub getSize {
         chomp($dateValue);
         my $stringToSign="HEAD\n\n$contentType\n$dateValue\n$resource";
 
-        my $signature = Digest::SHA::hmac_sha1_base64($stringToSign, _getEnv('ROK4_S3_SECRETKEY'));
+        my $signature = Digest::SHA::hmac_sha1_base64($stringToSign, $ENV{ROK4_S3_SECRETKEY});
         while (length($signature) % 4) {
             $signature .= '=';
         }
 
-        my $host = _getEnv('ROK4_S3_URL');
+        my $host = $ENV{ROK4_S3_URL};
         $host =~ s/^https?:\/\/(.+):[0-9]+\/?$/$1/;
 
         # set custom HTTP request header fields
-        my $request = HTTP::Request->new(HEAD => _getEnv('ROK4_S3_URL').$resource);
+        my $request = HTTP::Request->new(HEAD => $ENV{ROK4_S3_URL}.$resource);
         $request->header('Host' => $host);
         $request->header('Date' => $dateValue);
         $request->header('Content-Type' => $contentType);
-        $request->header('Authorization' => sprintf ("AWS %s:$signature", _getEnv('ROK4_S3_KEY')));
+        $request->header('Authorization' => sprintf ("AWS %s:$signature", $ENV{ROK4_S3_KEY}));
          
         my $response = _getUserAgent()->request($request);
         if ($response->is_success) {
@@ -1144,7 +1144,7 @@ sub remove {
 
         my $resource = "/$containerName/$objectName";
 
-        my $request = HTTP::Request->new(DELETE => _getEnv('ROK4_SWIFT_PUBLICURL').$resource);
+        my $request = HTTP::Request->new(DELETE => $ENV{ROK4_SWIFT_PUBLICURL}.$resource);
 
         my $try = 1;
         while ($try <= 2) {
@@ -1187,20 +1187,20 @@ sub remove {
         chomp($dateValue);
         my $stringToSign="DELETE\n\n$contentType\n$dateValue\n$resource";
 
-        my $signature = Digest::SHA::hmac_sha1_base64($stringToSign, _getEnv('ROK4_S3_SECRETKEY'));
+        my $signature = Digest::SHA::hmac_sha1_base64($stringToSign, $ENV{ROK4_S3_SECRETKEY});
         while (length($signature) % 4) {
             $signature .= '=';
         }
 
-        my $host = _getEnv('ROK4_S3_URL');
+        my $host = $ENV{ROK4_S3_URL};
         $host =~ s/^https?:\/\/(.+):[0-9]+\/?$/$1/;
 
         # set custom HTTP request header fields
-        my $request = HTTP::Request->new(DELETE => _getEnv('ROK4_S3_URL').$resource);
+        my $request = HTTP::Request->new(DELETE => $ENV{ROK4_S3_URL}.$resource);
         $request->header('Host' => $host);
         $request->header('Date' => $dateValue);
         $request->header('Content-Type' => $contentType);
-        $request->header('Authorization' => sprintf ("AWS %s:$signature", _getEnv('ROK4_S3_KEY')));
+        $request->header('Authorization' => sprintf ("AWS %s:$signature", $ENV{ROK4_S3_KEY}));
          
         my $response = _getUserAgent()->request($request);
         if ($response->is_success) {
@@ -1315,21 +1315,21 @@ sub symLink {
         chomp($dateValue);
         my $stringToSign="PUT\n\n$contentType\n$dateValue\n$resource";
 
-        my $signature = Digest::SHA::hmac_sha1_base64($stringToSign, _getEnv('ROK4_S3_SECRETKEY'));
+        my $signature = Digest::SHA::hmac_sha1_base64($stringToSign, $ENV{ROK4_S3_SECRETKEY});
         while (length($signature) % 4) {
             $signature .= '=';
         }
 
-        my $host = _getEnv('ROK4_S3_URL');
+        my $host = $ENV{ROK4_S3_URL};
         $host =~ s/^https?:\/\/(.+):[0-9]+\/?$/$1/;
 
         # set custom HTTP request header fields
-        my $request = HTTP::Request->new(PUT => _getEnv('ROK4_S3_URL').$resource);
+        my $request = HTTP::Request->new(PUT => $ENV{ROK4_S3_URL}.$resource);
         $request->content($symlink_content);
         $request->header('Host' => $host);
         $request->header('Date' => $dateValue);
         $request->header('Content-Type' => $contentType);
-        $request->header('Authorization' => sprintf ("AWS %s:$signature", _getEnv('ROK4_S3_KEY')));
+        $request->header('Authorization' => sprintf ("AWS %s:$signature", $ENV{ROK4_S3_KEY}));
             
         my $response = _getUserAgent()->request($request);
         if ($response->is_success) {
@@ -1366,7 +1366,7 @@ sub symLink {
 
         my $resource = "/$toContainerName/$toPath";
 
-        my $request = HTTP::Request->new(PUT => _getEnv('ROK4_SWIFT_PUBLICURL').$resource);
+        my $request = HTTP::Request->new(PUT => $ENV{ROK4_SWIFT_PUBLICURL}.$resource);
         $request->content($symlink_content);
 
         my $try = 1;
@@ -1454,7 +1454,7 @@ Function: isSwiftKeystoneAuthentication
 Precise if swift authentication is made with keystone
 =cut
 sub isSwiftKeystoneAuthentication {
-    if (defined _getEnv("ROK4_KEYSTONE_DOMAINID")) {
+    if (defined $ENV{ROK4_KEYSTONE_DOMAINID}) {
         return TRUE;
     }
     return FALSE;
@@ -1464,19 +1464,6 @@ sub isSwiftKeystoneAuthentication {
 ####################################################################################################
 #                              Group: Internal functions                                           #
 ####################################################################################################
-
-=begin nd
-Function: _getEnv
-
-Get the environment variable's value for the provided key.
-
-Parameters:
-    key - string - requested variable's name
-=cut
-sub _getEnv {
-    my $key = shift;
-    return $ENV{$key};
-};
 
 =begin nd
 Function: _getSwiftToken
@@ -1498,13 +1485,13 @@ sub _getSwiftToken {
         return $SWIFT_TOKEN;
     }
 
-    if (defined _getEnv('ROK4_KEYSTONE_DOMAINID')) {
+    if (defined $ENV{ROK4_KEYSTONE_DOMAINID}) {
         # Keystone authentication
         my $body_object = {
             "auth" => {
                 "scope" => {
                     "project" => {
-                        "id" => _getEnv('ROK4_KEYSTONE_PROJECTID')
+                        "id" => $ENV{ROK4_KEYSTONE_PROJECTID}
                     }
                 },
                 "identity" => {
@@ -1514,10 +1501,10 @@ sub _getSwiftToken {
                     "password" => {
                         "user" => {
                             "domain" => {
-                                "id" => _getEnv('ROK4_KEYSTONE_DOMAINID')
+                                "id" => $ENV{ROK4_KEYSTONE_DOMAINID}
                             },
-                            "name" => _getEnv('ROK4_SWIFT_USER'),
-                            "password" => _getEnv('ROK4_SWIFT_PASSWD')
+                            "name" => $ENV{ROK4_SWIFT_USER},
+                            "password" => $ENV{ROK4_SWIFT_PASSWD}
                         }
                     }
                 }
@@ -1526,7 +1513,7 @@ sub _getSwiftToken {
         my $json = JSON::to_json($body_object, {utf8 => 1});
 
         my $request = HTTP::Request::Common::POST(
-            _getEnv('ROK4_SWIFT_AUTHURL'),
+            $ENV{ROK4_SWIFT_AUTHURL},
             Content_Type => "application/json",
             Content => $json
         );
@@ -1548,14 +1535,14 @@ sub _getSwiftToken {
     } else {
         # Native swift authentication
         my $request = HTTP::Request::Common::GET(
-            _getEnv('ROK4_SWIFT_AUTHURL')
+            $ENV{ROK4_SWIFT_AUTHURL}
         );
 
         $request->header(
-            'X-Storage-User' => _getEnv('ROK4_SWIFT_ACCOUNT').":"._getEnv('ROK4_SWIFT_USER'),
-            'X-Storage-Pass' => _getEnv('ROK4_SWIFT_PASSWD'),
-            'X-Auth-User' => _getEnv('ROK4_SWIFT_ACCOUNT').":"._getEnv('ROK4_SWIFT_USER'),
-            'X-Auth-Key' => _getEnv('ROK4_SWIFT_PASSWD')
+            'X-Storage-User' => $ENV{ROK4_SWIFT_ACCOUNT}.":".$ENV{ROK4_SWIFT_USER},
+            'X-Storage-Pass' => $ENV{ROK4_SWIFT_PASSWD},
+            'X-Auth-User' => $ENV{ROK4_SWIFT_ACCOUNT}.":".$ENV{ROK4_SWIFT_USER},
+            'X-Auth-Key' => $ENV{ROK4_SWIFT_PASSWD}
         );
 
         my $response = _getUserAgent()->request($request);
@@ -1682,20 +1669,20 @@ sub _getRealData {
         chomp($date_gmt);
         my $string_to_sign="GET\n\n$content_type\n$date_gmt\n$resource";
 
-        my $signature = Digest::SHA::hmac_sha1_base64($string_to_sign, _getEnv('ROK4_S3_SECRETKEY'));
+        my $signature = Digest::SHA::hmac_sha1_base64($string_to_sign, $ENV{ROK4_S3_SECRETKEY});
         while (length($signature) % 4) {
             $signature .= '=';
         }
 
-        my $host = _getEnv('ROK4_S3_URL');
+        my $host = $ENV{ROK4_S3_URL};
         $host =~ s/^https?:\/\/(.+):[0-9]+\/?$/$1/;
 
-        my $request = HTTP::Request->new(GET => _getEnv('ROK4_S3_URL').$resource);
+        my $request = HTTP::Request->new(GET => $ENV{ROK4_S3_URL}.$resource);
 
         $request->header('Host' => $host);
         $request->header('Date' => $date_gmt);
         $request->header('Content-Type' => $content_type);
-        $request->header('Authorization' => sprintf ("AWS %s:$signature", _getEnv('ROK4_S3_KEY')));
+        $request->header('Authorization' => sprintf ("AWS %s:$signature", $ENV{ROK4_S3_KEY}));
 
         my $response = _getUserAgent()->request($request);
         if ($response->is_success) {
@@ -1737,7 +1724,7 @@ sub _getRealData {
 
         my $resource = "/$containerName/$objectName";
 
-        my $request = HTTP::Request->new(GET => _getEnv('ROK4_SWIFT_PUBLICURL').$resource);
+        my $request = HTTP::Request->new(GET => $ENV{ROK4_SWIFT_PUBLICURL}.$resource);
 
         my $try = 1;
         while ($try <= 2) {

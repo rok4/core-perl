@@ -277,7 +277,7 @@ sub getConvertedGeometry {
     my $convertExtent = $geom->Clone();
     if (defined $ct) {
         eval {
-            $ENV{'OGR_ENABLE_PARTIAL_REPROJECTION'} = TRUE;
+            $ENV{OGR_ENABLE_PARTIAL_REPROJECTION} = TRUE;
             $convertExtent->Transform($ct);
         };
         if ($@) { 
@@ -729,7 +729,7 @@ sub transformPoint {
 
     my $p = 0;
     eval {
-        $ENV{'OGR_ENABLE_PARTIAL_REPROJECTION'} = TRUE;
+        $ENV{OGR_ENABLE_PARTIAL_REPROJECTION} = TRUE;
         $p = $ct->TransformPoint($x,$y);
     };
     if ($@) {
@@ -767,7 +767,7 @@ sub convertBBox {
     my $geom = geometryFromBbox(@bbox);
 
     eval { 
-        $ENV{'OGR_ENABLE_PARTIAL_REPROJECTION'} = TRUE;
+        $ENV{OGR_ENABLE_PARTIAL_REPROJECTION} = TRUE;
         $geom->Transform($ct);
     };
     if ($@) {

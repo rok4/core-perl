@@ -182,7 +182,6 @@ Gamma, interpolation and compressionoption own default value, but we have to pro
 
 Parameters (list):
     params - string hash - Pyramid parameters, from configuration file or ancestor's pyramid descriptor
-    pixelIn - <ROK4::Core::Pixel> - Pixel caracteristic of input image data. Undefined if no image source or several format
 
 See also:
     <_load>
@@ -190,7 +189,6 @@ See also:
 sub new {
     my $class = shift;
     my $params = shift;
-    my $pixelIn = shift;
     
     $class= ref($class) || $class;
     # IMPORTANT : if modification, think to update natural documentation (just above)
@@ -206,7 +204,7 @@ sub new {
     bless($this, $class);
 
     # init. class
-    if (! $this->_load($params, $pixelIn)) {
+    if (! $this->_load($params)) {
         ERROR ("Can not create PyrImageSpec object !");
         return undef;
     }
@@ -222,7 +220,6 @@ Checks and stores informations.
 
 Parameters (list):
     params - string hash - Pyramid parameters, from configuration file or ancestor's pyramid descriptor
-    pixelIn - <ROK4::Core::Pixel> - Pixel caracteristic of input image data. Undefined if no image source
 =cut
 sub _load {
     my $this   = shift;
@@ -230,32 +227,6 @@ sub _load {
     my $pixelIn = shift;
     
     return FALSE if (! defined $params);
-
-    if ( (! exists $params->{photometric} && ! defined $params->{photometric}) ||
-         (! exists $params->{sampleformat} && ! defined $params->{sampleformat}) ||
-         (! exists $params->{bitspersample} && ! defined $params->{bitspersample}) ||
-         (! exists $params->{samplesperpixel} && ! defined $params->{samplesperpixel}) ) {
-
-        # One pixel parameter is missing, we must have a pixelIn (information from image source)
-        if (! defined $pixelIn) {
-            ERROR(
-                "One pixel parameter is missing (photometric, sampleformat, bitspersample ".
-                "or samplesperpixel), we must have a pixelIn (information from image source)"
-            );
-            return FALSE;
-        }
-
-        INFO(
-            "One pixel parameter is missing (photometric, sampleformat, bitspersample ".
-            "or samplesperpixel), we pick all information from image source"
-        );
-
-        $params->{samplesperpixel} = $pixelIn->getSamplesPerPixel();
-        $params->{sampleformat} = $pixelIn->getSampleFormat();
-        $params->{photometric} = $pixelIn->getPhotometric();
-        $params->{bitspersample} = $pixelIn->getBitsPerSample();
-        
-    }
 
     ### Pixel object
     my $objPixel = ROK4::Core::Pixel->new($params);

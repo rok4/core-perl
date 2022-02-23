@@ -65,10 +65,6 @@ Using:
         ERROR("Cannot create the new file pyramid");
     }
 
-    if (! $newPyramid->bindTileMatrixSet("/path/to/tms/directory")) {
-        ERROR("Can not bind the TMS to new file pyramid");
-    }
-
     # To load an existing pyramid, "to read" (XML)
     my $readPyramid = ROK4::Core::PyramidVector->new("DESCRIPTOR", "/path/to/an/existing/pyramid.pyr");
     # or to load an existing pyramid, "to read" (JSON)
@@ -78,9 +74,6 @@ Using:
         ERROR("Cannot load the pyramid");
     }
 
-    if (! $readPyramid->bindTileMatrixSet("/path/to/tms/directory")) {
-        ERROR("Can not bind the TMS to loaded pyramid");
-    }
     (end code)
 
 Attributes:
@@ -320,7 +313,7 @@ sub new {
             return undef;
         }
         $this->{name} = $params->{pyr_name_new};
-        $this->{name} =~ s/\.(pyr|PYR)$//;
+        $this->{name} =~ s/\.(pyr|PYR|json|JSON)$//;
 
         if (exists $params->{pyr_data_path} && defined $params->{pyr_data_path}) {
 
@@ -391,7 +384,7 @@ sub _load {
         # les valeurs sont récupérées de l'ancêtre pour s'assurer la cohérence
         $this->{own_ancestor} = TRUE;
 
-        $this->{tms} = $ancestor->getTileMatrixSet()->getName();
+        $this->{tms} = $ancestor->getTileMatrixSet();
         $this->{image_width} = $ancestor->getTilesPerWidth();
         $this->{image_height} = $ancestor->getTilesPerHeight();
 
@@ -412,9 +405,11 @@ sub _load {
             ERROR ("The parameter 'tms_name' is required!");
             return FALSE;
         }
-        # On chargera l'objet TMS plus tard on ne mémorise pour le moment que son nom.
-        $this->{tms} = $params->{tms_name};
-        $this->{tms} =~ s/\.json$//i;
+        $this->{tms} = ROK4::Core::TileMatrixSet->new($params->{tms_name});
+        if (! defined $this->{tms}) {
+            ERROR(sprintf "Cannot create a TileMatrixSet object from the TMS name %s", $params->{tms_name});
+            return FALSE;
+        }
         
         # image_width
         if (! exists $params->{image_width} || ! defined $params->{image_width}) {
@@ -429,6 +424,14 @@ sub _load {
             INFO(sprintf "Default value for 'image_height' : %s", $params->{image_height});
         }
         $this->{image_height} = $params->{image_height};
+    }
+
+    # Lier le TileMatrix à chaque niveau de la pyramide
+    while (my ($id, $level) = each(%{$this->{levels}}) ) {
+        if (! $level->bindTileMatrix($this->{tms})) {
+            ERROR("Cannot bind a TileMatrix to pyramid's level $id");
+            return FALSE;
+        }
     }
 
     return TRUE;
@@ -623,42 +626,6 @@ sub _readDescriptorJSON {
 ####################################################################################################
 #                                        Group: Update pyramid                                     #
 ####################################################################################################
-
-
-=begin nd
-Function: bindTileMatrixSet
-=cut
-sub bindTileMatrixSet {
-    my $this = shift;
-    my $tmsPath = shift;
-
-    # 1 : Créer l'objet TileMatrixSet
-    my $tmsFile = File::Spec->catdir($tmsPath, $this->{tms}.".json");
-    $this->{tms} = ROK4::Core::TileMatrixSet->new($tmsFile);
-    if (! defined $this->{tms}) {
-        ERROR("Cannot create a TileMatrixSet object from the file $tmsFile");
-        return FALSE;
-    }
-
-    # Une pyramide vecteur ne peux être faite que sur un TMS Quadtree 3857 ou 4326 (limites de tippecanoe)
-    if ( !(uc($this->{tms}->getSRS()) eq "EPSG:3857" && $this->{tms}->isQTree()) && 
-        !(uc($this->{tms}->getSRS()) eq "EPSG:4326" && $this->{tms}->isQTree()))
-    {
-        ERROR("TMS ($tmsFile) is not handled for a vector pyramid (tippecanoe)");
-        return FALSE;
-    }
-
-    # 2 : Lier le TileMatrix à chaque niveau de la pyramide
-    while (my ($id, $level) = each(%{$this->{levels}}) ) {
-        if (! $level->bindTileMatrix($this->{tms})) {
-            ERROR("Cannot bind a TileMatrix to pyramid's level $id");
-            return FALSE;
-        }
-    }
-
-    return TRUE;
-}
-
 
 =begin nd
 Function: addLevel
@@ -869,6 +836,11 @@ sub checkCompatibility {
         if ($this->getDirDepth() != $other->getDirDepth()) {
             return 0;
         }
+    } else {
+        # Dans le cas d'un stockage objet, les contenants doivent être les mêmes
+        if ($this->getStorageRoot() ne $other->getStorageRoot() ) {
+            return 0;
+        }
     }
 
     if ($this->getTilesPerWidth() != $other->getTilesPerWidth()) {
@@ -896,8 +868,6 @@ sub checkCompatibility {
 
 =begin nd
 Function: writeDescriptor
-
-Back up it at the end
 =cut
 sub writeDescriptor {
     my $this = shift;
@@ -1271,8 +1241,9 @@ sub loadList {
     }
 
     my $listPath = $this->getListPath();
+    my $tmpList = sprintf "/tmp/content%08X.list", rand(0xffffffff);
 
-    if (! ROK4::Core::ProxyStorage::copy($this->{storage_type}, $listPath, "FILE", "/tmp/content.list")) {
+    if (! ROK4::Core::ProxyStorage::copy($this->{storage_type}, $listPath, "FILE", "$tmpList")) {
         ERROR("Cannot copy list file from final storage : $listPath");
         return FALSE;
     }
@@ -1284,8 +1255,8 @@ sub loadList {
         IMAGE => "DATA"
     );
 
-    if (! open LIST, "<", "/tmp/content.list") {
-        ERROR("Cannot open pyramid list file (to load content in cache) : /tmp/content.list");
+    if (! open LIST, "<", "$tmpList") {
+        ERROR("Cannot open pyramid list file (to load content in cache) : $tmpList");
         return FALSE;
     }
 
@@ -1507,8 +1478,9 @@ sub flushCachedList {
         return TRUE;
     }
 
-    if (! open LIST, ">", "/tmp/content.list") {
-        ERROR("Cannot open temporary pyramid list file (to flush cached content) /tmp/content.list");
+    my $tmpList = sprintf "/tmp/content%08X.list", rand(0xffffffff);
+    if (! open LIST, ">", "$tmpList") {
+        ERROR("Cannot open temporary pyramid list file (to flush cached content) $tmpList");
         return FALSE;
     }
 
@@ -1540,8 +1512,8 @@ sub flushCachedList {
     # On va pouvoir écrire les racines maintenant
     my @LISTHDR;
 
-    if (! tie @LISTHDR, 'Tie::File', "/tmp/content.list") {
-        ERROR("Cannot flush the header of the cache list : /tmp/content.list");
+    if (! tie @LISTHDR, 'Tie::File', "$tmpList") {
+        ERROR("Cannot flush the header of the cache list : $tmpList");
         return FALSE;
     }
 
@@ -1555,10 +1527,10 @@ sub flushCachedList {
 
     $this->{cachedListModified} = FALSE;
 
-    # Stockage à l'mplacement final
+    # Stockage à l'emplacement final
     my $listPath = $this->getListPath();
 
-    if (! ROK4::Core::ProxyStorage::copy("FILE", "/tmp/content.list", $this->{storage_type}, $listPath)) {
+    if (! ROK4::Core::ProxyStorage::copy("FILE", "$tmpList", $this->{storage_type}, $listPath)) {
         ERROR("Cannot copy list file to final storage : $listPath");
         return FALSE;
     }
