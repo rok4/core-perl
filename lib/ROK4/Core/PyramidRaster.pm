@@ -1386,10 +1386,18 @@ Function: loadList
 Read the list and store content in an hash as following :
 |   level => {
 |       DATA => {
-|          col_row => full slab path (file or object)
+|          col_row => {
+|              root => root, with pyramid name
+|              name => slab name (type, level, column and row)
+|              origin => full slab path, with the origin list format
+|          }
 |       },
 |       MASK => {
-|          col_row => full slab path (file or object)
+|          col_row => {
+|              root => root, with pyramid name
+|              name => slab name (type, level, column and row)
+|              origin => full slab path, with the origin list format
+|          }
 |       }
 |   }
 =cut
@@ -1459,6 +1467,8 @@ sub loadList {
         my $target = $line;
         $target =~ s/^(\d+)\///;
 
+        my $origin = "$root/$target";
+
         # On va vouloir déterminer le niveau, la colonne et la ligne de la dalle, ainsi que le type (DATA ou MASK)
         # Cette extraction diffère selon que l'on est en mode fichier ou objet
 
@@ -1507,7 +1517,8 @@ sub loadList {
         }
         $this->{cachedList}->{$level}->{$type}->{"${col}_${row}"} = {
             root => $root,
-            name => $target
+            name => $target,
+            origin => $origin
         }
     }
 
@@ -1549,7 +1560,7 @@ sub getLevelSlabs {
 =begin nd
 Function: containSlab
 
-Precises if the provided slab belongs to the pyramid, using the cached list. Returns the root abd the target as a list reference if present, undef otherwise
+Precises if the provided slab belongs to the pyramid, using the cached list. Returns the root and the name as a list reference if present, undef otherwise
 
 Parameters (list):
     type - string - DATA or MASK

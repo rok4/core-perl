@@ -1103,6 +1103,7 @@ sub getSize {
             ERROR("Cannot stat CEPH object $objectName (pool $poolName): $!");
             return undef;
         }
+        chomp($ret);
 
         return (split(/ /, $ret))[-1];
     }
