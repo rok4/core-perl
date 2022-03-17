@@ -746,7 +746,7 @@ sub updateStorageInfos {
         $this->{storage_type} = "FILE";
         $this->{data_path} = File::Spec->rel2abs($params->{pyr_data_path});
 
-        if ( exists $params->{dir_depth} && defined $params->{dir_depth} && ROK4::Core::CheckUtils::isStrictPositiveInt($params->{dir_depth})) {
+        if ( exists $params->{dir_depth} && defined $params->{dir_depth} && ROK4::Core::Utils::isStrictPositiveInt($params->{dir_depth})) {
             $this->{dir_depth} = $params->{dir_depth};
         } else {
             $this->{dir_depth} = 2;
@@ -903,12 +903,6 @@ sub writeDescriptor {
 ####################################################################################################
 #                                Group: Common getters                                             #
 ####################################################################################################
-
-# Function: ownAncestor
-sub ownAncestor {
-    my $this = shift;
-    return $this->{own_ancestor};
-}
 
 # Function: getFormatCode
 sub getFormatCode {

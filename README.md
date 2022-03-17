@@ -28,6 +28,7 @@
     * liblog-log4perl-perl
     * libjson-parse-perl
     * libjson-perl
+    * libjson-validator-perl
     * libtest-simple-perl
     * libxml-libxml-perl
     * libamazon-s3-perl

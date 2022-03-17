@@ -49,16 +49,14 @@ Using:
     use ROK4::Core::Pixel;
 
     my $objC = ROK4::Core::Pixel->new({
-        sampleformat => "uint",
-        photometric => "rgb",
-        samplesperpixel => 3,
-        bitspersample => 8,
+        sampleformat => "UINT8",
+        samplesperpixel => 3
     });
     (end code)
 
 Attributes:
     photometric - string - Samples' interpretation.
-    sampleformat - string - Sample format, type.
+    sampleformat - string - Basic sample format, int or float.
     bitspersample - integer - Number of bits per sample (the same for all samples).
     samplesperpixel - integer - Number of channels.
 =cut
@@ -81,21 +79,30 @@ use ROK4::Core::Array;
 use constant TRUE  => 1;
 use constant FALSE => 0;
 
-# Constant: BITSPERSAMPLES
-# Define allowed values for attribute bitspersample
-my @BITSPERSAMPLES = (1,8,32);
-
 # Constant: PHOTOMETRICS
 # Define allowed values for attribute photometric
 my @PHOTOMETRICS = ('rgb','gray','mask');
+
+# Constant: DEFAULT_PHOTOMETRICS
+# Define default photometrics according to SAMPLESPERPIXELS
+my %DEFAULT_PHOTOMETRICS = (
+    1 => 'gray',
+    2 => 'gray',
+    3 => 'rgb',
+    4 => 'rgb'
+);
 
 # Constant: SAMPLESPERPIXELS
 # Define allowed values for attribute samplesperpixel
 my @SAMPLESPERPIXELS = (1,2,3,4);
 
 # Constant: SAMPLEFORMATS
-# Define allowed values for attribute sampleformat
-my @SAMPLEFORMATS = ('uint','float');
+# Define allowed values for attribute sampleformat, and splitted informations
+my %SAMPLEFORMATS = (
+    'INT8' => ['uint', 8],
+    'UINT8' => ['uint', 8],
+    'FLOAT32' => ['float', 32]
+);
 
 ####################################################################################################
 #                                        Group: Constructors                                       #
@@ -107,10 +114,9 @@ Constructor: new
 Pixel constructor. Bless an instance. Check and store attributes values.
 
 Parameters (hash):
-    photometric - string - Samples' interpretation. Default value : "rgb".
     sampleformat - string - Sample format, type.
-    bitspersample - integer - Number of bits per sample (the same for all samples).
     samplesperpixel - integer - Number of channels.
+    photometric - string - Optionnal, samples' interpretation. Default value : "rgb".
 =cut
 sub new {
     my $class = shift;
@@ -122,7 +128,7 @@ sub new {
         photometric => undef,
         sampleformat => undef,
         bitspersample => undef,
-        samplesperpixel => undef,
+        samplesperpixel => undef
     };
 
     bless($this, $class);
@@ -134,12 +140,14 @@ sub new {
         ERROR ("'sampleformat' required !");
         return undef;
     } else {
-        if (! defined ROK4::Core::Array::isInArray($params->{sampleformat}, @SAMPLEFORMATS)) {
+        if (! exists $SAMPLEFORMATS{$params->{sampleformat}}) {
             ERROR (sprintf "Unknown 'sampleformat' : %s !",$params->{sampleformat});
             return undef;
         }
-    }
-    $this->{sampleformat} = $params->{sampleformat};
+
+        $this->{sampleformat} = $SAMPLEFORMATS{$params->{sampleformat}}[0];
+        $this->{bitspersample} = $SAMPLEFORMATS{$params->{sampleformat}}[1];
+    }    
 
     ### Samples per pixel : REQUIRED
     if (! exists $params->{samplesperpixel} || ! defined $params->{samplesperpixel}) {
@@ -150,37 +158,18 @@ sub new {
             ERROR (sprintf "Unknown 'samplesperpixel' : %s !",$params->{samplesperpixel});
             return undef;
         }
+        $this->{samplesperpixel} = int($params->{samplesperpixel});
     }
-    $this->{samplesperpixel} = int($params->{samplesperpixel});
 
-    ### Photometric :  REQUIRED
+    ### Photometric :  OPTIONNAL
     if (! exists $params->{photometric} || ! defined $params->{photometric}) {
-        ERROR ("'photometric' required !");
-        return undef;
+        $this->{photometric} = $DEFAULT_PHOTOMETRICS{$this->{samplesperpixel}};
     } else {
         if (! defined ROK4::Core::Array::isInArray($params->{photometric}, @PHOTOMETRICS)) {
             ERROR (sprintf "Unknown 'photometric' : %s !",$params->{photometric});
             return undef;
         }
-    }
-    $this->{photometric} = $params->{photometric};
-
-    ### Bits per sample : REQUIRED
-    if (! exists $params->{bitspersample} || ! defined $params->{bitspersample}) {
-        ERROR ("'bitspersample' required !");
-        return undef;
-    } else {
-        if (! defined ROK4::Core::Array::isInArray($params->{bitspersample}, @BITSPERSAMPLES)) {
-            ERROR (sprintf "Unknown 'bitspersample' : %s !",$params->{bitspersample});
-            return undef;
-        }
-    }
-    $this->{bitspersample} = int($params->{bitspersample});
-
-    # If image own one-bit sample, conversion will be done, so it's like a 8-bit image
-    if ($this->{bitspersample} == 1) {
-        INFO("We have a one-bit pixel, we memorize an 8-bit pixel because on fly conversion will be done");
-        $this->{bitspersample} = 8;
+        $this->{photometric} = $params->{photometric};
     }
 
     return $this;
@@ -189,6 +178,20 @@ sub new {
 ####################################################################################################
 #                                Group: Getters - Setters                                          #
 ####################################################################################################
+
+
+# Function: validateNodata
+sub validateNodata {
+    my $this = shift;
+    my $nodata = shift;
+
+    if (scalar(@{$nodata} != $this->{samplesperpixel})) {
+        ERROR (sprintf "Nodata have to provide %s values", $this->{samplesperpixel});
+        return FALSE;
+    }
+
+    return TRUE;
+}
 
 # Function: getPhotometric
 sub getPhotometric {
@@ -200,6 +203,12 @@ sub getPhotometric {
 sub getSampleFormat {
     my $this = shift;
     return $this->{sampleformat};
+}
+
+# Function: getSampleFormatCode
+sub getSampleFormatCode {
+    my $this = shift;
+    return sprintf "%s%s", uc($this->{sampleformat}), $this->{bitspersample};
 }
 
 # Function: getBitsPerSample
@@ -305,7 +314,7 @@ Example:
     Object ROK4::Core::Pixel :
          Bits per sample : 8
          Photometric : rgb
-         Sample format : uint
+         Sample format : int
          Samples per pixel : 1
     (end code)
 =cut

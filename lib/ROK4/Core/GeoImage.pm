@@ -212,7 +212,6 @@ Returns:
 =cut
 sub getImageInfo {
     my $this = shift;
-
     return ROK4::Core::ProxyGDAL::getPixel($this->{completePath});    
 }
 

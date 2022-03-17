@@ -539,19 +539,14 @@ sub getPixel {
 
     my $i = 0;
 
-    my $DataType       = undef;
-    my $Band           = undef;
-    my @Interpretation;
-
+    my $DataType = undef;
     foreach my $objBand ($dataset->Bands()) {
 
-        push @Interpretation, lc $objBand->ColorInterpretation();
-
-        if (!defined $DataType) {
-            $DataType = lc $objBand->DataType();
+        if (! defined $DataType) {
+            $DataType = uc($objBand->DataType());
         } else {
-            if (! (lc $objBand->DataType() eq $DataType)) {
-                ERROR (sprintf "DataType is not the same (%s and %s) for all band in this image !", lc $objBand->DataType(), $DataType);
+            if (uc($objBand->DataType()) ne $DataType) {
+                ERROR (sprintf "DataType is not the same (%s and %s) for all band in this image !", uc($objBand->DataType()), $DataType);
                 return undef;
             }
         }
@@ -559,59 +554,19 @@ sub getPixel {
         $i++;
     }
 
-    $Band = $i;
-
-    my $bitspersample = undef;
-    my $photometric = undef;
+    my $Band = $i;
     my $sampleformat = undef;
-    my $samplesperpixel = undef;
 
-    if ($DataType eq "byte") {
-        $bitspersample = 8;
-        $sampleformat  = "uint";
+    if ($DataType eq "BYTE") {
+        $sampleformat  = "UINT8";
     }
     else {
-        ($sampleformat, $bitspersample) = ($DataType =~ /(\w+)(\d{2})/);
-    }
-
-    if ($Band == 3) {
-        foreach (@Interpretation) {
-            last if ($_ !~ m/(red|green|blue)band/);
-        }
-        $photometric     = "rgb";
-        $samplesperpixel = 3;
-    }
-
-    if ($Band == 4) {
-        foreach (@Interpretation) {
-            last if ($_ !~ m/(red|green|blue|alpha)band/);
-        }
-        $photometric     = "rgb";
-        $samplesperpixel = 4;
-    }
-
-    if ($Band == 1) {
-        if ($Interpretation[0] eq "grayindex") {
-            $photometric     = "gray";
-            $samplesperpixel = 1;
-        }
-        if ($Interpretation[0] eq "paletteindex") {
-            $photometric     = "gray";
-            $samplesperpixel = 1;
-            $bitspersample = 1;
-        }
-    }
-
-    if (! (defined $bitspersample && defined $photometric && defined $sampleformat && defined $samplesperpixel)) {
-        ERROR ("The format of this image ('$filepath') is not handled by be4 !");
-        return undef;
+        $sampleformat = $DataType;
     }
     
     return ROK4::Core::Pixel->new({
-        bitspersample => $bitspersample,
-        photometric => $photometric,
         sampleformat => $sampleformat,
-        samplesperpixel => $samplesperpixel
+        samplesperpixel => $Band
     });
 }
 

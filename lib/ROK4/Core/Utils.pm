@@ -36,19 +36,23 @@
 ################################################################################
 
 =begin nd
-File: CheckUtils.pm
+File: Utils.pm
 
-Class: ROK4::Core::CheckUtils
+Class: ROK4::Core::Utils
 
-(see libperlauto/Core_CheckUtils.png)
+(see libperlauto/Core_Utils.png)
 =cut
 
 ################################################################################
 
-package ROK4::Core::CheckUtils;
+package ROK4::Core::Utils;
 
 use strict;
 use warnings;
+
+use Log::Log4perl qw(:easy);
+use JSON qw( );
+use JSON::Validator;
 
 ################################################################################
 # Constants
@@ -188,6 +192,69 @@ sub isEmpty {
   return TRUE  if (! defined $value);
   return TRUE  if ($value eq "");
   return FALSE;
+}
+
+####################################################################################################
+#                                 Group: JSON methods                                              #
+####################################################################################################
+
+=begin nd
+Function: get_hash_from_json_file
+
+Parameters (list):
+    file - string - Path to JSON file to load
+    
+Examples:
+    - IGN::Utils::get_hash_from_json_file("/home/toto/file.json")
+
+Returns:
+    Hash reference if success, undef if failure
+
+=cut
+
+sub get_hash_from_json_file {
+    my $file = shift;
+
+    my $json_text = do {
+        open(my $json_fh, "<", $file) or do {
+            ERROR(  sprintf "Cannot open JSON file : %s (%s)", $file, $! );
+            return undef;
+        };
+        local $/;
+        <$json_fh>
+    };
+    
+    return JSON::from_json($json_text);
+}
+
+=begin nd
+Function: validate_hash_with_json_schema
+
+Parameters (list):
+    data - hash reference - content to validate
+    schema - hash reference - JSON schema
+
+Returns:
+    TRUE or FALSE
+
+=cut
+
+sub validate_hash_with_json_schema {
+    my $data = shift;
+    my $schema = shift;
+
+    my $jv = JSON::Validator->new();
+    $jv->schema($schema);
+    my @errors = $jv->validate($data);
+    
+    if (scalar @errors > 0) {
+        for my $e (@errors) {
+            ERROR("    $e");
+        }
+        return FALSE;
+    }
+    
+    return TRUE;
 }
 
 1;

@@ -1011,9 +1011,26 @@ Clone object.
 =cut
 sub clone {
     my $this = shift;
+    my $clone_name = shift;
+    my $clone_root = shift;
 
     my $clone = { %{ $this } };
     bless($clone, 'ROK4::Core::LevelRaster');
+
+    if (defined $clone_root) {
+        # On est dans le cas d'un stockage fichier, et il faut modifier l'emplacement du descripteur et les dossiers image et masque
+        $clone->{dir_image} = File::Spec->catdir($clone_root, $clone_name, "DATA", $this->{id});
+        if (defined $clone->{dir_mask}) {
+            $clone->{dir_mask} = File::Spec->catdir($clone_root, $clone_name, "MASK", $this->{id});
+        }
+        $clone->{desc_path} = $clone_root;
+    } else {
+        # On est dans le cas d'un stockage objet, et il faut modifier les préfixes des images et des fichiers
+        $clone->{prefix_image} = sprintf "%s/DATA_%s", $clone_name, $this->{id};
+        if (defined $clone->{prefix_mask}) {
+            $clone->{prefix_image} = sprintf "%s/MASK_%s", $clone_name, $this->{id};
+        }
+    }
 
     return $clone;
 }

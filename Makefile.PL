@@ -33,6 +33,7 @@ WriteMakefile(
         "HTTP::Response" => 0,
         "JSON" => 0,
         "JSON::Parse" => 0,
+        "JSON::Validator" => 0,
         "List::Util" => 0,
         "Log::Log4perl" => 0,
         "LWP::UserAgent" => 0,
