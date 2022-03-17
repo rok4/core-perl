@@ -136,11 +136,9 @@ use constant TRUE  => 1;
 use constant FALSE => 0;
 
 # Constant: DEFAULT
-# Define default values for attributes dir_depth, image_width and image_height.
+# Define default values for attributes dir_depth.
 my %DEFAULT = (
-    dir_depth => 2,
-    image_width => 16,
-    image_height => 16
+    dir_depth => 2
 );
 
 ################################################################################
@@ -168,27 +166,23 @@ Parameters (list):
     ancestor - <ROK4::Core::PyramidVector> - Optionnal, to provide if we want to use parameters from ancestor 
 
 See also:
-    <_readDescriptorXML>, <_readDescriptorJSON>, <_load>
+    <_createFromXML>, <_createFromJSON>, <_load>
 =cut
 sub new {
     my $class = shift;
     my $type = shift;
     my $params = shift;
-    my $ancestor = shift;
 
     $class = ref($class) || $class;
 
     # IMPORTANT : if modification, think to update natural documentation (just above)
 
     my $this = {
-        type => undef,
-        own_ancestor => FALSE,
-
         name => undef,
 
         # OUT
-        image_width  => undef,
-        image_height => undef,
+        image_width  => 16,
+        image_height => 16,
 
         tms => undef,
         levels => {},
@@ -280,21 +274,15 @@ sub new {
             return undef;
         }
 
-        # Cette pyramide est donc en lecture, on ne tient pas compte d'un éventuel ancêtre (qu'on ne devrait pas avoir)
-        $this->{type} = "READ";
-        $ancestor = undef;
-
-        # On remplit params avec les paramètres issus du parsage du XML
-        $params = {};
         if ($descriptor_path =~ m/\.pyr$/i) {
-            if (! $this->_readDescriptorXML($content, $params)) {
-                ERROR ("Cannot extract informations from XML pyramid descriptor");
+            if (! $this->_createFromXML($content)) {
+                ERROR ("Cannot create pyramid from XML descriptor");
                 return undef;
             }
         }
         elsif ($descriptor_path =~ m/\.json$/i) {
-            if (! $this->_readDescriptorJSON($content, $params)) {
-                ERROR ("Cannot extract informations from JSON pyramid descriptor");
+            if (! $this->_createFromJSON($content)) {
+                ERROR ("Cannot create pyramid from JSON descriptor");
                 return undef;
             }
         } else {
@@ -304,126 +292,10 @@ sub new {
 
     } else {
         # On crée une pyramide à partir de ses caractéristiques
-        # Cette pyramide est donc une nouvelle pyramide, à écrire
-        $this->{type} = "WRITE";
-
-        # Pyramid pyr_name_new, desc path
-        if (! exists $params->{pyr_name_new} || ! defined $params->{pyr_name_new}) {
-            ERROR ("The parameter 'pyr_name_new' is required!");
+        if (! $this->_createFromValues($params)) {
+            ERROR ("Cannot create pyramid from values");
             return undef;
         }
-        $this->{name} = $params->{pyr_name_new};
-        $this->{name} =~ s/\.(pyr|PYR|json|JSON)$//;
-
-        if (exists $params->{pyr_data_path} && defined $params->{pyr_data_path}) {
-
-            #### CAS D'UNE PYRAMIDE FICHIER
-            $this->{storage_type} = "FILE";
-            if ($this->{name} =~ /\//) {
-                ERROR ("FILE pyramid name have not to contain slash");
-                return undef;
-            }
-            $this->{data_path} = File::Spec->rel2abs($params->{pyr_data_path});
-
-        }
-
-        elsif (exists $params->{pyr_data_bucket_name} && defined $params->{pyr_data_bucket_name}) {
-
-            #### CAS D'UNE PYRAMIDE S3
-            $this->{storage_type} = "S3";
-            $this->{data_bucket} = $params->{pyr_data_bucket_name};
-
-        }
-
-        elsif (exists $params->{pyr_data_container_name} && defined $params->{pyr_data_container_name}) {
-
-            #### CAS D'UNE PYRAMIDE SWIFT
-            $this->{storage_type} = "SWIFT";
-            $this->{data_container} = $params->{pyr_data_container_name};
-        }
-
-        elsif (exists $params->{pyr_data_pool_name} && defined $params->{pyr_data_pool_name}) {
-
-            #### CAS D'UNE PYRAMIDE CEPH
-            $this->{storage_type} = "CEPH";
-            $this->{data_pool} = $params->{pyr_data_pool_name};
-        }
-
-        else {
-            ERROR("No storage provided for the new pyramid");
-            return undef;
-        }
-
-    }
-
-    if ( ! $this->_load($params,$ancestor) ) {return undef;}
-
-    return $this;
-}
-
-=begin nd
-Function: _load
-=cut
-sub _load {
-    my $this   = shift;
-    my $params = shift;
-    my $ancestor = shift;
-
-    if (! defined $params ) {
-        ERROR ("Parameters argument required (null) !");
-        return FALSE;
-    }
-
-    if (defined $ancestor && $ancestor->getStorageType() ne $this->getStorageType()) {
-        ERROR ("An ancestor is provided for the pyramid, and its storage type is not the same than the new pyramid");
-        return FALSE;
-    }
-
-    if (defined $ancestor) {
-        INFO("We have an ancestor, all parameters are picked from this pyramid");
-        # les valeurs sont récupérées de l'ancêtre pour s'assurer la cohérence
-        $this->{own_ancestor} = TRUE;
-
-        $this->{tms} = $ancestor->getTileMatrixSet();
-        $this->{image_width} = $ancestor->getTilesPerWidth();
-        $this->{image_height} = $ancestor->getTilesPerHeight();
-
-        if (defined $ancestor->getDirDepth()) {
-            $this->{dir_depth} = $ancestor->getDirDepth();
-        }
-    } else {
-
-        # dir_depth
-        if ($this->{storage_type} eq "FILE" && (! exists $params->{dir_depth} || ! defined $params->{dir_depth})) {
-            $params->{dir_depth} = $DEFAULT{dir_depth};
-            INFO(sprintf "Default value for 'dir_depth' : %s", $params->{dir_depth});
-        }
-        $this->{dir_depth} = $params->{dir_depth};
-
-        # TMS
-        if (! exists $params->{tms_name} || ! defined $params->{tms_name}) {
-            ERROR ("The parameter 'tms_name' is required!");
-            return FALSE;
-        }
-        $this->{tms} = ROK4::Core::TileMatrixSet->new($params->{tms_name});
-        if (! defined $this->{tms}) {
-            ERROR(sprintf "Cannot create a TileMatrixSet object from the TMS name %s", $params->{tms_name});
-            return FALSE;
-        }
-        
-        # image_width
-        if (! exists $params->{image_width} || ! defined $params->{image_width}) {
-            $params->{image_width} = $DEFAULT{image_width};
-            INFO(sprintf "Default value for 'image_width' : %s", $params->{image_width});
-        }
-        $this->{image_width} = $params->{image_width};
-
-        # image_height
-        if (! exists $params->{image_height} || ! defined $params->{image_height}) {
-            $params->{image_height} = $DEFAULT{image_height};
-            INFO(sprintf "Default value for 'image_height' : %s", $params->{image_height});
-        }
-        $this->{image_height} = $params->{image_height};
     }
 
     # Lier le TileMatrix à chaque niveau de la pyramide
@@ -434,14 +306,66 @@ sub _load {
         }
     }
 
+    return $this;
+}
+
+=begin nd
+Function: _createFromValues
+=cut
+sub _createFromValues {
+    my $this = shift;
+    my $params = shift;
+
+    $this->{name} = $params->{name};
+
+    # Stockage
+    $this->{storage_type} = $params->{storage}->{type};
+    if ($this->{storage_type} eq "FILE") {
+        if ($this->{name} =~ /\//) {
+            ERROR ("FILE pyramid name have not to contain slash");
+            return FALSE;
+        }
+        $this->{data_path} = File::Spec->rel2abs($params->{storage}->{root});
+        if (exists $params->{storage}->{depth}) {
+            $this->{dir_depth} = $params->{storage}->{depth};
+        } else {
+            $this->{dir_depth} = $DEFAULT{dir_depth};
+        }
+    }
+    elsif ($this->{storage_type} eq "S3") {
+        $this->{data_bucket} = $params->{root};
+    }
+    elsif ($this->{storage_type} eq "CEPH") {
+        $this->{data_pool} = $params->{root};
+    }
+    elsif ($this->{storage_type} eq "SWIFT") {
+        $this->{data_container} = $params->{root};
+    }
+    
+    # TMS
+    $this->{tms} = ROK4::Core::TileMatrixSet->new($params->{tms});
+    if (! defined $this->{tms}) {
+        ERROR(sprintf "Cannot create a TileMatrixSet object from the TMS name %s", $params->{tms});
+        return FALSE;
+    }
+    
+    # Slab size
+    if (exists $params->{slab_size}) {
+        $this->{image_width} = $params->{slab_size}->[0];
+        $this->{image_height} = $params->{slab_size}->[1];
+    }
+
+
+
+
     return TRUE;
 }
 
 
 =begin nd
-Function: _readDescriptorXML
+Function: _createFromXML
 =cut
-sub _readDescriptorXML {
+sub _createFromXML {
     my $this   = shift;
     my $content = shift;
     my $params = shift;
@@ -451,26 +375,26 @@ sub _readDescriptorXML {
     my $xmltree =  eval { $parser->parse_string($content); };
 
     if (! defined ($xmltree) || $@) {
-        ERROR (sprintf "Can not read the XML content : $content !");
         ERROR (sprintf "Can not read the XML content : $@ !");
         return FALSE;
     }
 
     my $root = $xmltree->getDocumentElement;
 
-    # Read tag value of tileMatrixSet and format, MANDATORY
-
     # TMS
-    my $tagtmsname = $root->findnodes('tileMatrixSet')->string_value();
-    if ($tagtmsname eq '') {
+    my $tmsname = $root->findnodes('tileMatrixSet')->string_value();
+    if ($tmsname eq '') {
         ERROR (sprintf "Can not extract 'tileMatrixSet' from the XML !");
         return FALSE;
     }
-    $params->{tms_name} = $tagtmsname;
-
+    $this->{tms} = ROK4::Core::TileMatrixSet->new($tmsname);
+    if (! defined $this->{tms}) {
+        ERROR("Cannot create a TileMatrixSet object from the TMS name $tmsname");
+        return FALSE;
+    }
     # FORMAT
-    my $tagformat = $root->findnodes('format')->string_value();
-    if ($tagformat eq '') {
+    my $format = $root->findnodes('format')->string_value();
+    if ($format eq '') {
         ERROR (sprintf "Can not extract 'format' in the XML !");
         return FALSE;
     }
@@ -505,14 +429,13 @@ sub _readDescriptorXML {
     }
 
     if (defined $oneLevelId) {
-        $params->{image_width}  = $this->{levels}->{$oneLevelId}->getImageWidth();
-        $params->{image_height} = $this->{levels}->{$oneLevelId}->getImageHeight();
-
+        $this->{image_width}  = $this->{levels}->{$oneLevelId}->getImageWidth();
+        $this->{image_height} = $this->{levels}->{$oneLevelId}->getImageHeight();
         $this->{storage_type} = $storageType;
 
         if ($storageType eq "FILE") {
             my ($dd, $dp) = $this->{levels}->{$oneLevelId}->getDirsInfo();
-            $params->{dir_depth} = $dd;
+            $this->{dir_depth} = $dd;
             $this->{data_path} = $dp;
         }
         elsif ($storageType eq "S3") {
@@ -536,30 +459,32 @@ sub _readDescriptorXML {
 
 
 =begin nd
-Function: _readDescriptorJSON
+Function: _createFromJSON
 =cut
-sub _readDescriptorJSON {
+sub _createFromJSON {
     my $this   = shift;
     my $content = shift;
     my $params = shift;
 
     eval { assert_valid_json ($content); };
     if ($@) {
-        ERROR (sprintf "Can not read the JSON content : $content !");
-        ERROR($@);
+        ERROR("Can not read the JSON content : $@");
         return FALSE;
     }
 
     my $pyramid_json_object = parse_json ($content);
-
-    # Read tag value of tileMatrixSet and format, MANDATORY
 
     # TMS
     if (! exists $pyramid_json_object->{tile_matrix_set}) {
         ERROR (sprintf "Can not extract 'tile_matrix_set' from the JSON !");
         return FALSE;
     }
-    $params->{tms_name} = $pyramid_json_object->{tile_matrix_set};
+
+    $this->{tms} = ROK4::Core::TileMatrixSet->new($pyramid_json_object->{tile_matrix_set});
+    if (! defined $this->{tms}) {
+        ERROR("Cannot create a TileMatrixSet object from the TMS name ".$pyramid_json_object->{tile_matrix_set});
+        return FALSE;
+    }
 
     # FORMAT
     if (! exists $pyramid_json_object->{format}) {
@@ -594,14 +519,14 @@ sub _readDescriptorJSON {
 
     # same for each level
     if (defined $oneLevelId) {
-        $params->{image_width}  = $this->{levels}->{$oneLevelId}->getImageWidth();
-        $params->{image_height} = $this->{levels}->{$oneLevelId}->getImageHeight();
+        $this->{image_width}  = $this->{levels}->{$oneLevelId}->getImageWidth();
+        $this->{image_height} = $this->{levels}->{$oneLevelId}->getImageHeight();
 
         $this->{storage_type} = $storageType;
 
         if ($storageType eq "FILE") {
             my ($dd, $dp) = $this->{levels}->{$oneLevelId}->getDirsInfo();
-            $params->{dir_depth} = $dd;
+            $this->{dir_depth} = $dd;
             $this->{data_path} = $dp;
         }
         elsif ($storageType eq "S3") {
@@ -633,21 +558,14 @@ Function: addLevel
 sub addLevel {
     my $this = shift;
     my $level = shift;
-    my $ancestor = shift;
     my $dbs = shift;
 
-    if ($this->{type} eq "READ") {
-        ERROR("Cannot add level to 'read' pyramid");
-        return FALSE;        
-    }
-
     if (exists $this->{levels}->{$level}) {
-        ERROR("Cannot add level $level in pyramid : already exists");
-        return FALSE;
+        return TRUE;
     }
 
     my $levelParams = {};
-    if (defined $this->{data_path}) {
+    if ($this->{storage_type} eq "FILE") {
         # On doit ajouter un niveau stockage fichier
         $levelParams = {
             id => $level,
@@ -660,7 +578,7 @@ sub addLevel {
             tables => $dbs->getTables()
         };
     }
-    elsif (defined $this->{data_pool}) {
+    elsif ($this->{storage_type} eq "CEPH") {
         # On doit ajouter un niveau stockage ceph
         $levelParams = {
             id => $level,
@@ -673,7 +591,7 @@ sub addLevel {
             tables => $dbs->getTables()
         };
     }
-    elsif (defined $this->{data_bucket}) {
+    elsif ($this->{storage_type} eq "S3") {
         # On doit ajouter un niveau stockage s3
         $levelParams = {
             id => $level,
@@ -686,7 +604,7 @@ sub addLevel {
             tables => $dbs->getTables()
         };
     }
-    elsif (defined $this->{data_container}) {
+    elsif ($this->{storage_type} eq "SWIFT") {
         # On doit ajouter un niveau stockage swift
         $levelParams = {
             id => $level,
@@ -698,15 +616,6 @@ sub addLevel {
 
             tables => $dbs->getTables()
         };
-    }
-
-    # Niveau ancêtre, potentiellement non défini, pour en reprendre les limites et les tables
-    if (defined $ancestor) {
-        my $ancestorLevel = $ancestor->getLevel($level);
-        if (defined $ancestorLevel) {
-            my ($rowMin,$rowMax,$colMin,$colMax) = $ancestorLevel->getLimits();
-            $levelParams->{limits} = [$rowMin,$rowMax,$colMin,$colMax];
-        }
     }
 
     $this->{levels}->{$level} = ROK4::Core::LevelVector->new("VALUES", $levelParams, $this->{data_path});
@@ -736,18 +645,19 @@ Function: updateStorageInfos
 =cut
 sub updateStorageInfos {
     my $this = shift;
+    my $type = shift;
     my $params = shift;
 
-    $this->{name} = $params->{pyr_name_new};
+    $this->{name} = $params->{name};
 
     my $updateLevelParams = {};
 
-    if (defined $params->{pyr_data_path}) {
+    if ($type eq "FILE") {
         $this->{storage_type} = "FILE";
-        $this->{data_path} = File::Spec->rel2abs($params->{pyr_data_path});
+        $this->{data_path} = File::Spec->rel2abs($params->{root});
 
-        if ( exists $params->{dir_depth} && defined $params->{dir_depth} && ROK4::Core::Utils::isStrictPositiveInt($params->{dir_depth})) {
-            $this->{dir_depth} = $params->{dir_depth};
+        if ( defined $params->{depth}) {
+            $this->{dir_depth} = $params->{depth};
         } else {
             $this->{dir_depth} = 2;
         }
@@ -760,9 +670,9 @@ sub updateStorageInfos {
         $updateLevelParams->{dir_depth} = $this->{dir_depth};
         $updateLevelParams->{dir_data} = $this->getDataRoot();
     }
-    elsif (defined $params->{pyr_data_pool_name}) {
+    elsif ($type eq "CEPH") {
         $this->{storage_type} = "CEPH";
-        $this->{data_pool} = $params->{pyr_data_pool_name};
+        $this->{data_pool} = $params->{root};
 
         $this->{data_path} = undef;
         $this->{dir_depth} = undef;
@@ -772,9 +682,9 @@ sub updateStorageInfos {
         $updateLevelParams->{prefix} = $this->{name};
         $updateLevelParams->{pool_name} = $this->{data_pool};
     }
-    elsif (defined $params->{pyr_data_bucket_name}) {
+    elsif ($type eq "S3") {
         $this->{storage_type} = "S3";
-        $this->{data_bucket} = $params->{pyr_data_bucket_name};
+        $this->{data_bucket} = $params->{root};
 
         $this->{data_path} = undef;
         $this->{dir_depth} = undef;
@@ -784,9 +694,9 @@ sub updateStorageInfos {
         $updateLevelParams->{prefix} = $this->{name};
         $updateLevelParams->{bucket_name} = $this->{data_bucket};
     }
-    elsif (defined $params->{pyr_data_container_name}) {
+    elsif ($type eq "SWIFT") {
         $this->{storage_type} = "SWIFT";
-        $this->{data_container} = $params->{pyr_data_container_name};
+        $this->{data_container} = $params->{root};
 
         $this->{data_path} = undef;
         $this->{dir_depth} = undef;
@@ -795,6 +705,9 @@ sub updateStorageInfos {
 
         $updateLevelParams->{prefix} = $this->{name};
         $updateLevelParams->{container_name} = $this->{data_container};
+    } else {
+        ERROR("Unknown storage type $type");
+        return FALSE;
     }
 
 
@@ -908,12 +821,6 @@ sub writeDescriptor {
 sub getFormatCode {
     my $this = shift;
     return "TIFF_PBF_MVT";
-}
-
-# Function: getType
-sub getType {
-    my $this = shift;
-    return "RASTER";
 }
 
 # Function: getName
@@ -1245,7 +1152,7 @@ sub loadList {
     my $listPath = $this->getListPath();
     my $tmpList = sprintf "/tmp/content%08X.list", rand(0xffffffff);
 
-    if (! ROK4::Core::ProxyStorage::copy($this->{storage_type}, $listPath, "FILE", "$tmpList")) {
+    if (! ROK4::Core::ProxyStorage::copy($this->{storage_type}, $listPath, "FILE", $tmpList)) {
         ERROR("Cannot copy list file from final storage : $listPath");
         return FALSE;
     }
@@ -1257,7 +1164,7 @@ sub loadList {
         IMAGE => "DATA"
     );
 
-    if (! open LIST, "<", "$tmpList") {
+    if (! open LIST, "<", $tmpList) {
         ERROR("Cannot open pyramid list file (to load content in cache) : $tmpList");
         return FALSE;
     }
@@ -1490,7 +1397,7 @@ sub flushCachedList {
     }
 
     my $tmpList = sprintf "/tmp/content%08X.list", rand(0xffffffff);
-    if (! open LIST, ">", "$tmpList") {
+    if (! open LIST, ">", $tmpList) {
         ERROR("Cannot open temporary pyramid list file (to flush cached content) $tmpList");
         return FALSE;
     }
@@ -1523,7 +1430,7 @@ sub flushCachedList {
     # On va pouvoir écrire les racines maintenant
     my @LISTHDR;
 
-    if (! tie @LISTHDR, 'Tie::File', "$tmpList") {
+    if (! tie @LISTHDR, 'Tie::File', $tmpList) {
         ERROR("Cannot flush the header of the cache list : $tmpList");
         return FALSE;
     }
@@ -1541,7 +1448,7 @@ sub flushCachedList {
     # Stockage à l'emplacement final
     my $listPath = $this->getListPath();
 
-    if (! ROK4::Core::ProxyStorage::copy("FILE", "$tmpList", $this->{storage_type}, $listPath)) {
+    if (! ROK4::Core::ProxyStorage::copy("FILE", $tmpList, $this->{storage_type}, $listPath)) {
         ERROR("Cannot copy list file to final storage : $listPath");
         return FALSE;
     }
@@ -1576,21 +1483,35 @@ sub getCachedListStats {
 Function: clone
 
 Clone object. Recursive clone only for levels. Other object attributes are just referenced.
+
+Parameters (list):
+    clone_name - string - Name of the cloned pyramid
+    clone_root - string - Optionnal, only for FILE pyramide, storage directory of the cloned pyramid
+
+Returns:
+    the cloned pyramid
 =cut
 sub clone {
     my $this = shift;
+    my $clone_name = shift;
+    my $clone_root = shift;
     
     my $clone = { %{ $this } };
     bless($clone, 'ROK4::Core::PyramidVector');
     delete $clone->{levels};
 
-    while (my ($id, $level) = each(%{$this->{levels}}) ) {
-        $clone->{levels}->{$id} = $level->clone();
+    if ($this->{storage_type} eq "FILE" && ! defined $clone_root) {
+        $clone_root = $this->{data_path};
     }
+
+    while (my ($id, $level) = each(%{$this->{levels}}) ) {
+        $clone->{levels}->{$id} = $level->clone($clone_name, $clone_root);
+    }
+
+    $clone->{name} = $clone_name;
 
     return $clone;
 }
-
 
 1;
 __END__
