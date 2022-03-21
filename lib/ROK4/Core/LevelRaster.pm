@@ -460,10 +460,10 @@ sub _loadJSON {
         return FALSE;
     }
     $this->{limits} = [
-        $level_json_object->{min_row},
-        $level_json_object->{max_row},
-        $level_json_object->{min_col},
-        $level_json_object->{max_col}
+        $level_json_object->{tile_limits}->{min_row},
+        $level_json_object->{tile_limits}->{max_row},
+        $level_json_object->{tile_limits}->{min_col},
+        $level_json_object->{tile_limits}->{max_col}
     ];
 
     # STOCKAGE

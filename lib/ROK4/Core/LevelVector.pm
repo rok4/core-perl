@@ -395,7 +395,7 @@ sub _loadXML {
                 type => $geometry
             },
             final_name => $tablename,
-            attributes_analysis => {}
+            attributes => {}
         };
 
         my @atts = $t->getElementsByTagName('attribute');
@@ -407,23 +407,23 @@ sub _loadXML {
             my $count = $a->findvalue('count');
             my $values = $a->findvalue('values');
 
-            $this->{tables}->{$tablename}->{attributes_analysis}->{$attname} = {
+            $this->{tables}->{$tablename}->{attributes}->{$attname} = {
                 type => $atttype,
                 count => $count
             };
 
             if (defined $min && $min ne "") {
-                $this->{tables}->{$tablename}->{attributes_analysis}->{$attname}->{min} = $min;
+                $this->{tables}->{$tablename}->{attributes}->{$attname}->{min} = $min;
             }
 
             if (defined $max && $max ne "") {
-                $this->{tables}->{$tablename}->{attributes_analysis}->{$attname}->{max} = $max;
+                $this->{tables}->{$tablename}->{attributes}->{$attname}->{max} = $max;
             }
 
             if (defined $values && $values ne "") {
                 $values =~ s/^"//g;
                 $values =~ s/"$//g;
-                @{$this->{tables}->{$tablename}->{attributes_analysis}->{$attname}->{values}} = split(/","/, $values);
+                @{$this->{tables}->{$tablename}->{attributes}->{$attname}->{values}} = split(/","/, $values);
             }
         }
     }
@@ -499,10 +499,10 @@ sub _loadJSON {
         return FALSE;
     }
     $this->{limits} = [
-        $level_json_object->{min_row},
-        $level_json_object->{max_row},
-        $level_json_object->{min_col},
-        $level_json_object->{max_col}
+        $level_json_object->{tile_limits}->{min_row},
+        $level_json_object->{tile_limits}->{max_row},
+        $level_json_object->{tile_limits}->{min_col},
+        $level_json_object->{tile_limits}->{max_col}
     ];
 
     foreach my $t (@{$level_json_object->{tables}}) {
@@ -515,7 +515,7 @@ sub _loadJSON {
                 type => $geometry
             },
             final_name => $tablename,
-            attributes_analysis => {}
+            attributes => {}
         };
 
         foreach my $a (@{$t->{attributes}}) {
@@ -526,21 +526,21 @@ sub _loadJSON {
             my $count = $a->{count};
             my $values = $a->{values};
 
-            $this->{tables}->{$tablename}->{attributes_analysis}->{$attname} = {
+            $this->{tables}->{$tablename}->{attributes}->{$attname} = {
                 type => $atttype,
                 count => $count
             };
 
             if (defined $min && $min ne "") {
-                $this->{tables}->{$tablename}->{attributes_analysis}->{$attname}->{min} = $min;
+                $this->{tables}->{$tablename}->{attributes}->{$attname}->{min} = $min;
             }
 
             if (defined $max && $max ne "") {
-                $this->{tables}->{$tablename}->{attributes_analysis}->{$attname}->{max} = $max;
+                $this->{tables}->{$tablename}->{attributes}->{$attname}->{max} = $max;
             }
 
             if (defined $values) {
-                $this->{tables}->{$tablename}->{attributes_analysis}->{$attname}->{values} = $values;
+                $this->{tables}->{$tablename}->{attributes}->{$attname}->{values} = $values;
             }
         }
     }
@@ -1037,7 +1037,7 @@ sub exportToJsonObject {
             attributes => []
         };
 
-        while (my ($att, $hash) = each(%{$this->{tables}->{$table}->{attributes_analysis}})) {
+        while (my ($att, $hash) = each(%{$this->{tables}->{$table}->{attributes}})) {
             my $attribute_json_object = {
                 name => $att,
                 type => $hash->{type},
