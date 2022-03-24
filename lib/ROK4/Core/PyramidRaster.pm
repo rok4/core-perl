@@ -318,6 +318,12 @@ sub new {
         }
     }
 
+
+    if (! ROK4::Core::ProxyStorage::checkEnvironmentVariables($this->{storage_type})) {
+        ERROR(sprintf "Environment variable is missing for a %s storage", $this->{storage_type});
+        return undef;
+    }
+
     # Lier le TileMatrix à chaque niveau de la pyramide
     while (my ($id, $level) = each(%{$this->{levels}}) ) {
         if (! $level->bindTileMatrix($this->{tms})) {
@@ -406,7 +412,7 @@ sub _createFromValues {
 
     # We want masks in the final pyramid ?
 
-    if ( exists $params->{mask}->{export} && $params->{mask}->{export} ) {
+    if ( exists $params->{mask} && $params->{mask} ) {
         $this->{own_masks} = TRUE;
     }
 
@@ -1134,6 +1140,39 @@ sub getLevel {
     my $this = shift;
     my $level = shift;
     return $this->{levels}->{$level};
+}
+
+# Function: ownLevels
+sub ownLevels {
+    my $this = shift;
+    my $bottomID = shift;
+    my $topID = shift;
+
+    my $bottomOrder = $this->{tms}->getOrderfromID($bottomID);
+    if (! defined $bottomOrder) {
+        ERROR("$bottomID is not a level ID in the pyramid TMS");
+        return FALSE;
+    };
+    my $topOrder = $this->{tms}->getOrderfromID($topID);
+    if (! defined $topOrder) {
+        ERROR("$topID is not a level ID in the pyramid TMS");
+        return FALSE;
+    };
+    
+    if ($bottomOrder > $topOrder) {
+        ERROR("Bottom level $bottomID is above top level $topID");
+        return FALSE
+    };
+
+    for (my $order = $bottomOrder; $order <= $topOrder; $order++) {
+        my $l = $this->{tms}->getIDfromOrder($order);
+        if (! exists $this->{levels}->{$l}) {
+            ERROR("level $l is not in the pyramid");
+            return FALSE
+        };
+    }
+
+    return TRUE;
 }
 
 # Function: getBottomID
