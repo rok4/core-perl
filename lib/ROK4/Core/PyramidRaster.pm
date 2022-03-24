@@ -790,10 +790,16 @@ Function: updateStorageInfos
 =cut
 sub updateStorageInfos {
     my $this = shift;
-    my $type = shift;
     my $params = shift;
 
-    $this->{name} = $params->{name};
+    my $type = $params->{type};
+
+    # Environment variables nécessaire au stockage
+
+    if (! ROK4::Core::ProxyStorage::checkEnvironmentVariables($type)) {
+        ERROR("Environment variable is missing for a $type storage");
+        return FALSE;
+    }
 
     my $updateLevelParams = {};
 

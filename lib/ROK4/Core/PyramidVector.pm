@@ -561,6 +561,7 @@ sub addLevel {
     my $dbs = shift;
 
     if (exists $this->{levels}->{$level}) {
+        # Le niveau existe déjà, ce qui est normal dans le cas d'une mise à jour
         return TRUE;
     }
 
@@ -645,10 +646,16 @@ Function: updateStorageInfos
 =cut
 sub updateStorageInfos {
     my $this = shift;
-    my $type = shift;
     my $params = shift;
 
-    $this->{name} = $params->{name};
+    my $type = $params->{type};
+
+    # Environment variables nécessaire au stockage
+
+    if (! ROK4::Core::ProxyStorage::checkEnvironmentVariables($type)) {
+        ERROR("Environment variable is missing for a $type storage");
+        return FALSE;
+    }
 
     my $updateLevelParams = {};
 
@@ -709,7 +716,6 @@ sub updateStorageInfos {
         ERROR("Unknown storage type $type");
         return FALSE;
     }
-
 
     while (my ($id, $level) = each(%{$this->{levels}}) ) {
         if (! $level->updateStorageInfos($updateLevelParams)) {
