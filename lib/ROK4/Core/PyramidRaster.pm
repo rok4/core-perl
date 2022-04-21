@@ -714,50 +714,30 @@ sub addLevel {
         return TRUE;
     }
 
-    my $levelParams = {};
+    my $levelParams = {
+        id => $level,
+        tm => $this->{tms}->getTileMatrix($level),
+        size => [$this->{image_width}, $this->{image_height}]
+    };
     if ($this->{storage_type} eq "FILE") {
         # On doit ajouter un niveau stockage fichier
-        $levelParams = {
-            id => $level,
-            tm => $this->{tms}->getTileMatrix($level),
-            size => [$this->{image_width}, $this->{image_height}],
-
-            dir_data => $this->getDataRoot(),
-            dir_depth => $this->{dir_depth}
-        };
+        $levelParams->{dir_data} = $this->getDataRoot();
+        $levelParams->{dir_depth} = $this->{dir_depth};
     }
     elsif ($this->{storage_type} eq "CEPH") {
         # On doit ajouter un niveau stockage ceph
-        $levelParams = {
-            id => $level,
-            tm => $this->{tms}->getTileMatrix($level),
-            size => [$this->{image_width}, $this->{image_height}],
-
-            prefix => $this->{name},
-            pool_name => $this->{data_pool}
-        };
+        $levelParams->{prefix} = $this->{name};
+        $levelParams->{pool_name} = $this->{data_pool};
     }
     elsif ($this->{storage_type} eq "S3") {
         # On doit ajouter un niveau stockage s3
-        $levelParams = {
-            id => $level,
-            tm => $this->{tms}->getTileMatrix($level),
-            size => [$this->{image_width}, $this->{image_height}],
-
-            prefix => $this->{name},
-            bucket_name => $this->{data_bucket}
-        };
+        $levelParams->{prefix} = $this->{name};
+        $levelParams->{pool_name} = $this->{data_bucket};
     }
     elsif ($this->{storage_type} eq "SWIFT") {
         # On doit ajouter un niveau stockage swift
-        $levelParams = {
-            id => $level,
-            tm => $this->{tms}->getTileMatrix($level),
-            size => [$this->{image_width}, $this->{image_height}],
-
-            prefix => $this->{name},
-            container_name => $this->{data_container}
-        };
+        $levelParams->{prefix} = $this->{name};
+        $levelParams->{pool_name} = $this->{data_container};
     }
 
     if ($this->{own_masks}) {

@@ -558,65 +558,38 @@ Function: addLevel
 sub addLevel {
     my $this = shift;
     my $level = shift;
-    my $dbs = shift;
+    my $source = shift;
 
     if (exists $this->{levels}->{$level}) {
         # Le niveau existe déjà, ce qui est normal dans le cas d'une mise à jour
         return TRUE;
     }
 
-    my $levelParams = {};
+    my $levelParams = {
+        id => $level,
+        tm => $this->{tms}->getTileMatrix($level),
+        size => [$this->{image_width}, $this->{image_height}],
+        tables => $source->getTables()
+    };
     if ($this->{storage_type} eq "FILE") {
         # On doit ajouter un niveau stockage fichier
-        $levelParams = {
-            id => $level,
-            tm => $this->{tms}->getTileMatrix($level),
-            size => [$this->{image_width}, $this->{image_height}],
-
-            dir_data => $this->getDataRoot(),
-            dir_depth => $this->{dir_depth},
-
-            tables => $dbs->getTables()
-        };
+        $levelParams->{dir_data} = $this->getDataRoot();
+        $levelParams->{dir_depth} = $this->{dir_depth};
     }
     elsif ($this->{storage_type} eq "CEPH") {
         # On doit ajouter un niveau stockage ceph
-        $levelParams = {
-            id => $level,
-            tm => $this->{tms}->getTileMatrix($level),
-            size => [$this->{image_width}, $this->{image_height}],
-
-            prefix => $this->{name},
-            pool_name => $this->{data_pool},
-
-            tables => $dbs->getTables()
-        };
+        $levelParams->{prefix} = $this->{name};
+        $levelParams->{pool_name} = $this->{data_pool};
     }
     elsif ($this->{storage_type} eq "S3") {
         # On doit ajouter un niveau stockage s3
-        $levelParams = {
-            id => $level,
-            tm => $this->{tms}->getTileMatrix($level),
-            size => [$this->{image_width}, $this->{image_height}],
-
-            prefix => $this->{name},
-            bucket_name => $this->{data_bucket},
-
-            tables => $dbs->getTables()
-        };
+        $levelParams->{prefix} = $this->{name};
+        $levelParams->{pool_name} = $this->{data_bucket};
     }
     elsif ($this->{storage_type} eq "SWIFT") {
         # On doit ajouter un niveau stockage swift
-        $levelParams = {
-            id => $level,
-            tm => $this->{tms}->getTileMatrix($level),
-            size => [$this->{image_width}, $this->{image_height}],
-
-            prefix => $this->{name},
-            container_name => $this->{data_container},
-
-            tables => $dbs->getTables()
-        };
+        $levelParams->{prefix} = $this->{name};
+        $levelParams->{pool_name} = $this->{data_container};
     }
 
     $this->{levels}->{$level} = ROK4::Core::LevelVector->new("VALUES", $levelParams, $this->{data_path});

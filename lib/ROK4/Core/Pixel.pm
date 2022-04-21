@@ -300,37 +300,5 @@ sub convertible {
     return TRUE;
 }
 
-####################################################################################################
-#                                Group: Export methods                                             #
-####################################################################################################
-
-=begin nd
-Function: exportForDebug
-
-Returns all pixel's components. Useful for debug.
-
-Example:
-    (start code)
-    Object ROK4::Core::Pixel :
-         Bits per sample : 8
-         Photometric : rgb
-         Sample format : int
-         Samples per pixel : 1
-    (end code)
-=cut
-sub exportForDebug {
-    my $this = shift ;
-    
-    my $export = "";
-    
-    $export .= "\nObject ROK4::Core::Pixel :\n";
-    $export .= sprintf "\t Bits per sample : %s\n", $this->{bitspersample};
-    $export .= sprintf "\t Photometric : %s\n", $this->{photometric};
-    $export .= sprintf "\t Sample format : %s\n", $this->{sampleformat};
-    $export .= sprintf "\t Samples per pixel : %s\n", $this->{samplesperpixel};
-    
-    return $export;
-}
-
 1;
 __END__

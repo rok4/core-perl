@@ -58,7 +58,7 @@ Using:
         prefix => "TOTO_",
         bucket_name => "MyBucket",
 
-        tables => $objDatabaseSource->getTables()
+        tables => $objSource->getTables()
     });
 
     # From XML element
@@ -1029,15 +1029,17 @@ sub exportToJsonObject {
         }
     }
 
-    foreach my $table (keys(%{$this->{tables}})) {
+    foreach my $t (keys(%{$this->{tables}})) {
+
+        my $table = $this->{tables}->{$t};
 
         my $table_json_object = {
-            name => $this->{tables}->{$table}->{final_name},
-            geometry => $this->{tables}->{$table}->{geometry}->{type},
+            name => $table->{final_name},
+            geometry => $table->{geometry}->{type},
             attributes => []
         };
 
-        while (my ($att, $hash) = each(%{$this->{tables}->{$table}->{attributes}})) {
+        while (my ($att, $hash) = each(%{$table->{attributes}})) {
             my $attribute_json_object = {
                 name => $att,
                 type => $hash->{type},

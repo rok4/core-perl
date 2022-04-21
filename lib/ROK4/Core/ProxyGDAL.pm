@@ -461,114 +461,202 @@ sub exportFile {
 
 
 ####################################################################################################
-#                               Group: Georeferenced images functions                              #
+#                               Group: Data informations functions                                 #
 ####################################################################################################
 
 
 =begin nd
-Function: getGeoreferencement
+Function: getRasterInfos
 
-Return the georeferencement (bbox, resolution) from an image
+Return the georeferencement (bbox, resolution) and pixel infos about an image
 
 Parameters (list):
     filepath - string - Path of the referenced image
+    type - string - Data type : Vector or Raster
 
 Return (hash reference):
-{
-    dimensions => [width, height],
-    resolutions => [xres, yres],
-    bbox => [xmin, ymin, xmax, ymax]
-}
+    Raster case
+| {
+|     dimensions => [width, height],
+|     pixel => ROK4::Core::Pixel object,
+|     resolutions => [xres, yres],
+|     bbox => [xmin, ymin, xmax, ymax]
+| }
+
+    Vector case
+| {
+|     table => {
+|            'final_name' => 'departement',
+|            'attributes' => {
+|                'ogc_fid' => {
+|                    'count' => 101,
+|                    'type' => 'integer'
+|                },
+|                'nom_dep' => {
+|                    'type' => 'character varying(30)',
+|                    'count' => 101
+|                }
+|            },
+|            'geometry' => {
+|                            'name' => 'wkb_geometry',
+|                            'type' => 'MULTIPOLYGON'
+|                            },
+|            'native_name' => 'departement'
+|     }
+|     bbox => [xmin, ymin, xmax, ymax]
+| }
 
     undefined if failure
 =cut
-sub getGeoreferencement {
+sub get_informations {
     my $filepath = shift;
+    my $type = shift;
 
     my $dataset;
-    eval { $dataset= Geo::GDAL::Open($filepath, 'ReadOnly'); };
+    eval { $dataset= Geo::GDAL::Open({"Name" => $filepath, "Access" => 'ReadOnly', "Type" => $type}); };
     if ($@) {
-        ERROR (sprintf "Can not open image ('%s') : '%s' !", $filepath, $@);
+        ERROR (sprintf "Can not open file ('%s') : '%s' !", $filepath, $@);
         return undef;
     }
 
-    my $refgeo = $dataset->GetGeoTransform();
-    if (! defined ($refgeo) || scalar (@$refgeo) != 6) {
-        ERROR ("Can not found geometric parameters of image ('$filepath') !");
-        return undef;
+    my $res = {};
+
+    if ($type eq "Raster") {
+        my $refgeo = $dataset->GetGeoTransform();
+        if (! defined ($refgeo) || scalar (@$refgeo) != 6) {
+            ERROR ("Can not found geometric parameters of image ('$filepath') !");
+            return undef;
+        }
+
+        # forced formatting string !
+        my ($xmin, $dx, $rx, $ymax, $ry, $ndy)= @{$refgeo};
+
+        $res = {
+            dimensions => [$dataset->{RasterXSize}, $dataset->{RasterYSize}],
+            resolutions => [sprintf("%.12f", $dx), sprintf("%.12f", abs($ndy))],
+            bbox => [
+                sprintf("%.12f", $xmin),
+                sprintf("%.12f", $ymax + $ndy*$dataset->{RasterYSize}),
+                sprintf("%.12f", $xmin + $dx*$dataset->{RasterXSize}),
+                sprintf("%.12f", $ymax)
+            ],
+        };
+
+        # Pixel
+
+        my $i = 0;
+
+        my $DataType = undef;
+        foreach my $objBand ($dataset->Bands()) {
+
+            if (! defined $DataType) {
+                $DataType = uc($objBand->DataType());
+            } else {
+                if (uc($objBand->DataType()) ne $DataType) {
+                    ERROR (sprintf "DataType is not the same (%s and %s) for all band in this image !", uc($objBand->DataType()), $DataType);
+                    return undef;
+                }
+            }
+            
+            $i++;
+        }
+
+        my $Band = $i;
+        my $sampleformat = undef;
+
+        if ($DataType eq "BYTE") {
+            $sampleformat  = "UINT8";
+        }
+        else {
+            $sampleformat = $DataType;
+        }
+        
+        $res->{pixel} = ROK4::Core::Pixel->new({
+            sampleformat => $sampleformat,
+            samplesperpixel => $Band
+        });
+
+        
+    } elsif ($type eq "Vector") {
+
+# |     table => {
+# |            'final_name' => 'departement',
+# |            'attributes' => {
+# |                'ogc_fid' => {
+# |                    'count' => 101,
+# |                    'type' => 'integer'
+# |                },
+# |                'nom_dep' => {
+# |                    'type' => 'character varying(30)',
+# |                    'count' => 101
+# |                }
+# |            },
+# |            'geometry' => {
+# |                 'type' => 'MULTIPOLYGON'
+# |            },
+# |        }
+
+        my $layer;
+        eval {
+            $layer = $dataset->GetLayer();
+            my %schema = $layer->Schema();
+
+            my $table = {
+                final_name => $schema{"Name"},
+                attributes => {},
+                geometry => {
+                    type => undef
+                }
+            };
+
+            for my $field (@{$schema{"Fields"}}) {
+                if (exists $field->{"SpatialReference"}) {
+
+                    if (exists $res->{"geometry"}) {
+                        die("$filepath: multi geometry layer");
+                    }
+
+                    $table->{geometry}->{type} = $field->{"Type"};
+                } else {
+
+                    my $count = $dataset->ExecuteSQL(sprintf("SELECT count(DISTINCT %s) FROM %s", $field->{"Name"}, $schema{"Name"}));
+
+                    $table->{attributes}->{$field->{"Name"}} = {
+                        "type" => $field->{"Type"},
+                        "count" => $count->GetNextFeature()->GetField(0)
+                    };
+                }
+            }
+
+            $res->{table} = $table;
+        };
+
+        if ($@) {
+            ERROR ("Can not get vector infos from file ('$filepath')");
+            ERROR (sprintf "$@ ");
+            return undef;
+        }
+
+        eval {
+            my $extent = $layer->GetExtent();
+            $res->{"bbox"} = [
+                $extent->[0],
+                $extent->[2],
+                $extent->[1],
+                $extent->[3]
+            ];
+        };
+
+        if ($@) {
+            # A priori la géométrie détectée ne permet pas de calculer l'étendue (CSV vide par exemple)
+            ERROR (sprintf "Cannot determine vector data extent");
+            return undef;
+        }
     }
 
-    # forced formatting string !
-    my ($xmin, $dx, $rx, $ymax, $ry, $ndy)= @$refgeo;
-
-    my $res = {
-        dimensions => [$dataset->{RasterXSize}, $dataset->{RasterYSize}],
-        resolutions => [sprintf("%.12f", $dx), sprintf("%.12f", abs($ndy))],
-        bbox => [
-            sprintf("%.12f", $xmin),
-            sprintf("%.12f", $ymax + $ndy*$dataset->{RasterYSize}),
-            sprintf("%.12f", $xmin + $dx*$dataset->{RasterXSize}),
-            sprintf("%.12f", $ymax)
-        ],
-    };
-    
     return $res;
 }
 
-
-=begin nd
-Function: getPixel
-
-Return the pixel informations from an image
-
-Parameters (list):
-    filepath - string - Path of the image
-
-Return (list):
-    a <ROK4::Core::Pixel> object, undefined if failure
-=cut
-sub getPixel {
-    my $filepath = shift;
-
-    my $dataset;
-    eval { $dataset= Geo::GDAL::Open($filepath, 'ReadOnly'); };
-    if ($@) {
-        ERROR (sprintf "Can not open image ('%s') : '%s' !", $filepath, $@);
-        return undef;
-    }
-
-    my $i = 0;
-
-    my $DataType = undef;
-    foreach my $objBand ($dataset->Bands()) {
-
-        if (! defined $DataType) {
-            $DataType = uc($objBand->DataType());
-        } else {
-            if (uc($objBand->DataType()) ne $DataType) {
-                ERROR (sprintf "DataType is not the same (%s and %s) for all band in this image !", uc($objBand->DataType()), $DataType);
-                return undef;
-            }
-        }
-        
-        $i++;
-    }
-
-    my $Band = $i;
-    my $sampleformat = undef;
-
-    if ($DataType eq "BYTE") {
-        $sampleformat  = "UINT8";
-    }
-    else {
-        $sampleformat = $DataType;
-    }
-    
-    return ROK4::Core::Pixel->new({
-        sampleformat => $sampleformat,
-        samplesperpixel => $Band
-    });
-}
 
 ####################################################################################################
 #                               Group: Spatial Reference functions                                 #

@@ -36,43 +36,77 @@
 ################################################################################
 
 =begin nd
-File: GeoImage.pm
+File: GeoVector.pm
 
-Class: ROK4::Core::GeoImage
+Class: ROK4::Core::GeoVector
 
-(see libperlauto/Core_GeoImage.png)
+(see libperlauto/Core_GeoVector.png)
 
 Describes a georeferenced image and enable to know its components.
 
 Using:
     (start code)
-    use ROK4::Core::GeoImage;
+    use ROK4::Core::GeoVector;
 
-    # GeoImage object creation
-    my $objGeoImage = ROK4::Core::GeoImage->new("/home/ign/DATA/XXXXX_YYYYY.tif");
+    # GeoVector object creation
+    my $objGeoVector = ROK4::Core::GeoVector->new("/home/ign/DATA/XXXXX_YYYYY.dbf");
     (end code)
 
 Attributes:
-    completePath - string - Complete path (/home/ign/DATA/XXXXX_YYYYY.tif)
-    filename - string - Just the image name, with file extension (XXXXX_YYYYY.tif).
+    completePath - string - Complete path (/home/ign/DATA/XXXXX_YYYYY.dbf)
+    filename - string - Just the image name, with file extension (XXXXX_YYYYY.dbf).
     filepath - string - The directory which contain the image (/home/ign/DATA)
-    maskCompletePath - string - Complete path of associated mask, if exists (undef otherwise).
-    srs - string - Projection of image
+    srs - string - Projection of file
     xmin - double - Bottom left corner X coordinate.
     ymin - double - Bottom left corner Y coordinate.
     xmax - double - Top right corner X coordinate.
     ymax - double - Top right corner Y coordinate.
-    xres - double - X wise resolution (in SRS unity).
-    yres - double - Y wise resolution (in SRS unity).
-    height - integer - Pixel height.
-    width - integer - Pixel width.
-    pixel - <ROK4::Core::Pixel> - Pixel infos.
+    table - hash - all informations about vector data
+|         {
+|            'filter' => '',
+|            'final_name' => 'departement',
+|            'attributes' => {
+|                'ogc_fid' => {
+|                    'count' => 101,
+|                    'type' => 'integer'
+|                },
+|                'nom_dep' => {
+|                    'type' => 'character varying(30)',
+|                    'count' => 101
+|                },
+|                'insee_reg' => {
+|                    'type' => 'character varying(2)',
+|                    'count' => 18
+|                },
+|                'chf_dep' => {
+|                    'count' => 101,
+|                    'type' => 'character varying(5)'
+|                },
+|               'id' => {
+|                    'count' => 101,
+|                    'type' => 'character varying(24)'
+|                },
+|                'insee_dep' => {
+|                    'type' => 'character varying(3)',
+|                    'count' => 101
+|                },
+|                'nom_dep_m' => {
+|                    'count' => 101,
+|                    'type' => 'character varying(30)'
+|                }
+|            },
+|            'geometry' => {
+|                            'name' => 'wkb_geometry',
+|                            'type' => 'MULTIPOLYGON'
+|                            },
+|            'native_name' => 'departement'
+|        }
     
 =cut
 
 ################################################################################
 
-package ROK4::Core::GeoImage;
+package ROK4::Core::GeoVector;
 
 use strict;
 use warnings;
@@ -98,11 +132,11 @@ END {}
 =begin nd
 Constructor: new
 
-GeoImage constructor. Bless an instance.
+GeoVector constructor. Bless an instance.
 
 Parameters (list):
-    completePath - string - Complete path to the image file.
-    srs - string - Projection of georeferenced image
+    completePath - string - Complete path to the vector file.
+    srs - string - Projection of data
 
 See also:
     <_init>
@@ -118,17 +152,12 @@ sub new {
         completePath => undef,
         filename => undef,
         filepath => undef,
-        maskCompletePath => undef,
         srs => undef,
         xmin => undef,
         ymax => undef,
         xmax => undef,
         ymin => undef,
-        xres => undef,
-        yres => undef,
-        height => undef,
-        width => undef,
-        pixel => undef
+        table => undef
     };
 
     bless($this, $class);
@@ -144,11 +173,9 @@ Function: _init
 
 Checks and stores file's informations.
 
-Search a potential associated data mask : A file with the same base name but the extension *.msk*.
-
 Parameters (list):
-    completePath - string - Complete path to the image file.
-    srs - string - Projection of georeferenced image
+    completePath - string - Complete path to the vector file.
+    srs - string - Projection of data
 =cut
 sub _init {
     my $this   = shift;
@@ -165,25 +192,22 @@ sub _init {
         return FALSE;
     }
     
-    # init. params    
+    # init. params
     $this->{completePath} = $completePath;
-        
-    my $maskPath = $completePath;
-    $maskPath =~ s/\.[a-zA-Z0-9]+$/\.msk/;
-    
-    if (-f $maskPath) {
-        INFO(sprintf "We have a mask associated to the image '%s' :\t%s",$completePath,$maskPath);
-        $this->{maskCompletePath} = $maskPath;
-    }
     
     #
     $this->{filepath} = File::Basename::dirname($completePath);
     $this->{filename} = File::Basename::basename($completePath);
 
-    my $infos = ROK4::Core::ProxyGDAL::get_informations($completePath, "Raster");
+    my $infos = ROK4::Core::ProxyGDAL::get_informations($completePath, "Vector");
     if (! defined $infos) {
-        ERROR ("Cannot extract infos from $completePath");
+        ERROR ("Cannot extract informations from $completePath");
         return FALSE;        
+    }
+
+    if (! exists $infos->{bbox}) {
+        ERROR (sprintf "Cannot calculate an extent from %s, is it geometric data ?", $this->{filename});
+        return FALSE;
     }
 
     $this->{xmin} = $infos->{bbox}->[0];
@@ -191,13 +215,7 @@ sub _init {
     $this->{xmax} = $infos->{bbox}->[2];
     $this->{ymax} = $infos->{bbox}->[3];
 
-    $this->{xres} = $infos->{resolutions}->[0];
-    $this->{yres} = $infos->{resolutions}->[1];
-
-    $this->{width} = $infos->{dimensions}->[0];
-    $this->{height} = $infos->{dimensions}->[1];
-
-    $this->{pixel} = $infos->{pixel};
+    $this->{table} = $infos->{table};
 
     return TRUE;
 }
@@ -205,15 +223,6 @@ sub _init {
 ####################################################################################################
 #                                Group: Getters - Setters                                          #
 ####################################################################################################
-
-=begin nd
-Function: getPixel
-=cut
-sub getPixel {
-    my $this = shift;
-
-    return $this->{pixel};
-}
 
 =begin nd
 Function: getBBox
@@ -229,18 +238,6 @@ sub getBBox {
 sub getSRS {
   my $this = shift;
   return $this->{srs};
-}
-
-# Function: getWidth
-sub getWidth {
-  my $this = shift;
-  return $this->{width};
-}
-
-# Function: getHeight
-sub getHeight {
-  my $this = shift;
-  return $this->{height};
 }
 
 # Function: getXmin
@@ -267,55 +264,22 @@ sub getYmax {
   return $this->{ymax};
 }
 
-# Function: getXres
-sub getXres {
-  my $this = shift;
-  return $this->{xres};  
-}
-
-# Function: getYres
-sub getYres {
-  my $this = shift;
-  return $this->{yres};  
-}
-
 # Function: getName
 sub getName {
   my $this = shift;
   return $this->{filename}; 
 }
 
-####################################################################################################
-#                                Group: Export methods                                             #
-####################################################################################################
+# Function: getTable
+sub getTable {
+  my $this = shift;
+  return $this->{table}; 
+}
 
-=begin nd
-Function: exportForMntConf
-
-Export a GeoImage object as a string. Output is formated to be used by mergeNtiff generation.
-
-Parameters:
-    useMask - boolean - Do we export mask into configuration
-
-Example:
-|    IMG completePath xmin ymax xmax ymin xres yres
-|    MSK maskCompletePath
-=cut
-sub exportForMntConf {
-    my $this = shift;
-    my $useMask = shift;
-
-    my $output = sprintf "IMG %s\t%s", $this->{completePath}, $this->{srs};
-
-    $output .= sprintf "\t%s\t%s\t%s\t%s\t%s\t%s\n",
-        $this->{xmin}, $this->{ymax}, $this->{xmax}, $this->{ymin},
-        $this->{xres}, $this->{yres};
-        
-    if ($useMask && defined $this->{maskCompletePath}) {
-        $output .= sprintf "MSK %s\n", $this->{maskCompletePath};
-    }
-
-    return $output;
+# Function: getCompletePath
+sub getCompletePath {
+  my $this = shift;
+  return $this->{completePath}; 
 }
 
 1;

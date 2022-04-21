@@ -539,40 +539,5 @@ sub addTargetTm {
     push @{$this->{targetsTm}}, $tm;
 }
 
-####################################################################################################
-#                                Group: Export methods                                             #
-####################################################################################################
-
-=begin nd
-Function: exportForDebug
-
-Returns all informations about the tile matrix. Useful for debug.
-
-Example:
-    (start code)
-    (end code)
-=cut
-sub exportForDebug {
-    my $this = shift;
-    
-    my $export = "";
-    
-    $export .= sprintf "\nObject ROK4::Core::TileMatrix :\n";
-    $export .= sprintf "\t ID : %s \n", $this->getID();
-    $export .= sprintf "\t Resolution : %s \n", $this->getResolution();
-    $export .= sprintf "\t Top left corner : %s, %s \n", $this->getTopLeftCornerX(), $this->getTopLeftCornerY();
-    $export .= sprintf "\t Tile width : %s \n", $this->getTileWidth();
-    $export .= sprintf "\t Tile height : %s \n", $this->getTileHeight();
-    $export .= sprintf "\t Matrix width : %s \n", $this->getMatrixWidth();
-    $export .= sprintf "\t Matrix height : %s \n", $this->getMatrixHeight();
-    $export .= sprintf "\t Targets tile matrix IDs (size:%s) :\n", scalar(@{$this->getTargetsTm()});
-    foreach my $tm (@{$this->getTargetsTm()}) {
-        $export .= sprintf "\t\t -> %s \n",$tm->getID();
-    };
-    
-    return $export;  
-};
-
-
 1;
 __END__
