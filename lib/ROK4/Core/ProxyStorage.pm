@@ -62,7 +62,7 @@ use warnings;
 
 use Data::Dumper;
 use Digest::SHA;
-use Amazon::S3;
+use Net::Amazon::S3;
 use File::Basename;
 use File::Copy ();
 use File::Map qw(map_file);
@@ -183,12 +183,13 @@ sub checkEnvironmentVariables {
             $S3_HOST =~ s/^https:\/\///;
         }
 
-        $S3 = Amazon::S3->new({
-            host => $S3_HOST,
+        $S3 = Net::Amazon::S3->new (
             secure => $S3_SECURE,
             aws_access_key_id => $ENV{ROK4_S3_KEY},
-            aws_secret_access_key => $ENV{ROK4_S3_SECRETKEY}
-        });
+            aws_secret_access_key => $ENV{ROK4_S3_SECRETKEY},
+            host => $S3_HOST,
+            secure => $S3_SECURE
+        );
     }
 
     return TRUE;
@@ -330,18 +331,11 @@ sub copy {
         if ($toType eq "FILE") {
             # Ceph -> File
 
-            # On regarde si c'est un objet symbolique, pour copier le vrai objet
-            my $realFromPath = _getRealData("CEPH", $fromPath);
-            if ( ! defined $realFromPath ) {
-                ERROR("Objet to download '$fromPath' does not exists");
-                return undef;
-            }
-
-            my ($poolName, @rest) = split("/", $realFromPath);
+            my ($poolName, @rest) = split("/", $fromPath);
             my $objectName = join("/", @rest);
 
             if (! defined $poolName || ! defined $objectName) {
-                ERROR("CEPH path is not valid (<poolName>/<objectName>) : $realFromPath");
+                ERROR("CEPH path is not valid (<poolName>/<objectName>) : $fromPath");
                 return FALSE;
             }
 
@@ -357,28 +351,18 @@ sub copy {
             if (system("rados -p $poolName get $objectName $toPath") == 0) {
                 return TRUE;
             } else {
-                ERROR("Cannot download CEPH object $realFromPath into file '$toPath': $@");
-                if ($realFromPath ne $fromPath) {
-                    ERROR("'$fromPath' is a symbolic objet which references '$realFromPath' which does not exist (broken link ?)")
-                }
+                ERROR("Cannot download CEPH object $fromPath into file '$toPath': $@");
                 return FALSE;
             }
         }
         elsif ($toType eq "CEPH") {
             # Ceph -> Ceph
 
-            # On regarde si c'est un objet symbolique, pour copier le vrai objet
-            my $realFromPath = _getRealData("CEPH", $fromPath);
-            if ( ! defined $realFromPath ) {
-                ERROR("Objet to copy '$fromPath' does not exists");
-                return undef;
-            }
-
-            my ($fromPool, @from) = split("/", $realFromPath);
+            my ($fromPool, @from) = split("/", $fromPath);
             my $fromObjectName = join("/", @from);
 
             if (! defined $fromPool || ! defined $fromObjectName) {
-                ERROR("CEPH path is not valid (<poolName>/<objectName>) : $realFromPath");
+                ERROR("CEPH path is not valid (<poolName>/<objectName>) : $fromPath");
                 return FALSE;
             }
 
@@ -391,7 +375,7 @@ sub copy {
             }
 
             if ($toPool ne $fromPool) {
-                ERROR("CEPH copy is not possible for different pool: $realFromPath -> X $toPath");
+                ERROR("CEPH copy is not possible for different pool: $fromPath -> X $toPath");
                 return FALSE;
             }
 
@@ -408,17 +392,11 @@ sub copy {
         if ($toType eq "FILE") {
             # S3 -> File
 
-            my $realFromPath = _getRealData("S3", $fromPath);
-            if ( ! defined $realFromPath ) {
-                ERROR("Objet to download '$fromPath' does not exists");
-                return FALSE;
-            }
-
-            my ($bucketName, @rest) = split("/", $realFromPath);
+            my ($bucketName, @rest) = split("/", $fromPath);
             my $objectName = join("/", @rest);
 
             if (! defined $bucketName || ! defined $objectName) {
-                ERROR("S3 path is not valid (<bucketName>/<objectName>) : $realFromPath");
+                ERROR("S3 path is not valid (<bucketName>/<objectName>) : $fromPath");
                 return FALSE;
             }
 
@@ -436,7 +414,7 @@ sub copy {
 
             my $result = $bucket->get_key_filename($objectName, "GET", $toPath);
             if (! defined $result) {
-                ERROR("Cannot download S3 object '$realFromPath' to file $toPath");
+                ERROR("Cannot download S3 object '$fromPath' to file $toPath");
                 return FALSE;
             } 
             return TRUE;
@@ -444,17 +422,11 @@ sub copy {
         elsif ($toType eq "S3") {
             # S3 -> S3
 
-            my $realFromPath = _getRealData("S3", $fromPath);
-            if ( ! defined $realFromPath ) {
-                ERROR("Objet to download '$fromPath' does not exists");
-                return undef;
-            }
-
-            my ($fromBucket, @from) = split("/", $realFromPath);
+            my ($fromBucket, @from) = split("/", $fromPath);
             my $fromObjectName = join("/", @from);
 
             if (! defined $fromBucket || ! defined $fromObjectName) {
-                ERROR("S3 path is not valid (<bucketName>/<objectName>) : $realFromPath");
+                ERROR("S3 path is not valid (<bucketName>/<objectName>) : $fromPath");
                 return FALSE;
             }
 
@@ -489,7 +461,7 @@ sub copy {
             if ($response->is_success) {
                 return TRUE;
             } else {
-                ERROR("Cannot copy S3 object '$realFromPath' to S3 object '$toPath'");
+                ERROR("Cannot copy S3 object '$fromPath' to S3 object '$toPath'");
                 ERROR("HTTP code: ", $response->code);
                 ERROR("HTTP message: ", $response->message);
                 ERROR("HTTP decoded content : ", $response->decoded_content);
@@ -502,17 +474,11 @@ sub copy {
         if ($toType eq "FILE") {
             # Swift -> File
 
-            my $realFromPath = _getRealData("SWIFT", $fromPath);
-            if ( ! defined $realFromPath ) {
-                ERROR("Objet to download '$fromPath' does not exists");
-                return undef;
-            }
-
-            my ($containerName, @rest) = split("/", $realFromPath);
+            my ($containerName, @rest) = split("/", $fromPath);
             my $objectName = join("/", @rest);
 
             if (! defined $containerName || ! defined $objectName) {
-                ERROR("SWIFT path is not valid (<containerName>/<objectName>) : $realFromPath");
+                ERROR("SWIFT path is not valid (<containerName>/<objectName>) : $fromPath");
                 return FALSE;
             }
 
@@ -547,7 +513,7 @@ sub copy {
                     $try++;
                 }
                 else {
-                    ERROR("Cannot download SWIFT object '$realFromPath' to file $toPath");
+                    ERROR("Cannot download SWIFT object '$fromPath' to file $toPath");
                     ERROR("HTTP code: ", $response->code);
                     ERROR("HTTP message: ", $response->message);
                     ERROR("HTTP decoded content : ", $response->decoded_content);
@@ -558,17 +524,11 @@ sub copy {
         elsif ($toType eq "SWIFT") {
             # Swift -> Swift
 
-            my $realFromPath = _getRealData("SWIFT", $fromPath);
-            if ( ! defined $realFromPath ) {
-                ERROR("Objet to download '$fromPath' does not exists");
-                return undef;
-            }
-
-            my ($fromContainer, @from) = split("/", $realFromPath);
+            my ($fromContainer, @from) = split("/", $fromPath);
             my $fromObjectName = join("/", @from);
 
             if (! defined $fromContainer || ! defined $fromObjectName) {
-                ERROR("SWIFT path is not valid (<containerName>/<objectName>) : $realFromPath");
+                ERROR("SWIFT path is not valid (<containerName>/<objectName>) : $fromPath");
                 return FALSE;
             }
 
@@ -603,7 +563,7 @@ sub copy {
                     $try++;
                 }
                 else {
-                    ERROR("Cannot copy SWIFT object : '$realFromPath' -> '$toPath'");
+                    ERROR("Cannot copy SWIFT object : '$fromPath' -> '$toPath'");
                     ERROR("HTTP code: ", $response->code);
                     ERROR("HTTP message: ", $response->message);
                     ERROR("HTTP decoded content : ", $response->decoded_content);
@@ -887,6 +847,8 @@ sub isPresent {
     my $type = shift;
     my $path = shift;
 
+    DEBUG(sprintf "$type $path exists ?");
+
     if ($type eq "FILE") {
         if (-f $path) {
             return TRUE;
@@ -923,32 +885,15 @@ sub isPresent {
             return FALSE;
         }
 
-        my $resource = "/$bucketName/$objectName";
-        my $contentType = "application/octet-stream";
-        my $dateValue = qx(TZ=GMT date -R);
-        chomp($dateValue);
-        my $stringToSign = "HEAD\n\n$contentType\n$dateValue\n$resource";
+        my $result = $S3->list_bucket({
+            bucket => $bucketName,
+            prefix => $objectName
+        });
 
-        my $signature = Digest::SHA::hmac_sha1_base64($stringToSign, $ENV{ROK4_S3_SECRETKEY});
-        while (length($signature) % 4) {
-            $signature .= '=';
-        }
-
-        my $host = $ENV{ROK4_S3_URL};
-        $host =~ s/^https?:\/\/(.+):[0-9]+\/?$/$1/;
-
-        # set custom HTTP request header fields
-        my $request = HTTP::Request->new(HEAD => $ENV{ROK4_S3_URL}.$resource);
-        $request->header('Host' => $host);
-        $request->header('Date' => $dateValue);
-        $request->header('Content-Type' => $contentType);
-        $request->header('Authorization' => sprintf ("AWS %s:$signature", $ENV{ROK4_S3_KEY}));
-         
-        my $response = _getUserAgent()->request($request);
-        if ($response->is_success) {
-            return TRUE;
-        } else {
+        if (scalar(@{$result->{keys}} == 0)) {
             return FALSE;
+        } else {
+            return TRUE;
         }
     }
     elsif ($type eq "SWIFT") {
@@ -1056,37 +1001,17 @@ sub getSize {
             return undef;
         }
 
-        my $resource = "/$bucketName/$objectName";
-        my $contentType="application/octet-stream";
-        my $dateValue=qx(TZ=GMT date -R);
-        chomp($dateValue);
-        my $stringToSign="HEAD\n\n$contentType\n$dateValue\n$resource";
+        my $result = $S3->list_bucket({
+            bucket => $bucketName,
+            prefix => $objectName
+        });
 
-        my $signature = Digest::SHA::hmac_sha1_base64($stringToSign, $ENV{ROK4_S3_SECRETKEY});
-        while (length($signature) % 4) {
-            $signature .= '=';
-        }
-
-        my $host = $ENV{ROK4_S3_URL};
-        $host =~ s/^https?:\/\/(.+):[0-9]+\/?$/$1/;
-
-        # set custom HTTP request header fields
-        my $request = HTTP::Request->new(HEAD => $ENV{ROK4_S3_URL}.$resource);
-        $request->header('Host' => $host);
-        $request->header('Date' => $dateValue);
-        $request->header('Content-Type' => $contentType);
-        $request->header('Authorization' => sprintf ("AWS %s:$signature", $ENV{ROK4_S3_KEY}));
-         
-        my $response = _getUserAgent()->request($request);
-        if ($response->is_success) {
-            return $response->header("Content-Length");
-        }
-        else {
-            ERROR("HTTP code: ", $response->code);
-            ERROR("HTTP message: ", $response->message);
-            ERROR("HTTP decoded content : ", $response->decoded_content);
+        if (scalar(@{$result->{keys}} == 0)) {
+            ERROR("Cannot stat S3 object $objectName (bucket $bucketName)");
             return undef;
         }
+
+        return $result->{keys}->[0]->{size};
     }
     elsif ($type eq "CEPH") {
 
@@ -1233,6 +1158,8 @@ sub symLink {
     my $toType = shift;
     my $toPath = shift;
 
+    DEBUG("Symlink target '$targetType' path '$targetPath', link '$toType' path '$toPath'.");
+
     if ($targetType eq "FILE" && $toType eq "FILE") {        
 
         # create folder
@@ -1244,128 +1171,50 @@ sub symLink {
             return FALSE;
         }
 
-        my $realTargetPath = _getRealData("FILE", $targetPath);
-        if ( ! defined $realTargetPath ) {
-            ERROR(sprintf "The file '%s' (to symlink) is not a file or a link in '%s' !", basename($targetPath), dirname($targetPath));
-            return undef;
-        }
-
-        my $relativeTargetPath = File::Spec->abs2rel($realTargetPath,$dir);
+        my $relativeTargetPath = File::Spec->abs2rel($targetPath,$dir);
 
         if (! symlink ($relativeTargetPath, $toPath)) {
             ERROR (sprintf "The file '%s' can not be linked by '%s' (%s) ?", $targetPath, $toPath, $!);
             return undef;
         }
 
-        return $realTargetPath;
+        return $targetPath;
     }
     elsif ($targetType eq "CEPH" && $toType eq "CEPH") {
 
-        # On vérifie que la dalle CEPH à lier n'est pas un alias, auquel cas on référence le vrai objet (pour éviter des alias en cascade)
-        my $realTarget = _getRealData("CEPH", $targetPath);
-        if ( ! defined $realTarget ) {
-            ERROR("Objet to link '$targetPath' does not exists");
-            return undef;
-        }
-
-        my ($tPoolName, @rest) = split("/", $realTarget);
-        $realTarget = join("/", @rest);
-
-        (my $toPoolName, @rest) = split("/", $toPath);
+        my ($toPoolName, @rest) = split("/", $toPath);
         $toPath = join("/", @rest);
 
-        if ($tPoolName ne $toPoolName) {
-            ERROR("CEPH link (symbolic object) is not possible between different pool: $toPoolName/toPath -> X $targetPath");
+        my $symlink_content = ROK4_SYMLINK_SIGNATURE . $targetPath;
+        if (system("echo -n \"$symlink_content\" | rados -p $toPoolName put $toPath /dev/stdin") == 0) {
+            return "$targetPath";
+        } else {
+            ERROR("Cannot symlink (make a rados put) object $targetPath with alias $toPath : $@");
             return undef;
         }
 
-        my $symlink_content = ROK4_SYMLINK_SIGNATURE . $realTarget;
-        if (system("echo -n \"$symlink_content\" | rados -p $toPoolName put $toPath /dev/stdin") == 0) {
-            return "$tPoolName/$realTarget";
-        } else {
-            ERROR("Cannot symlink (make a rados put) object $realTarget with alias $toPath : $@");
-            return undef;
-        }
-        
     }
     elsif ($targetType eq "S3" && $toType eq "S3") {
 
-        # On vérifie que la dalle S3 à lier n'est pas un alias, auquel cas on référence le vrai objet (pour éviter des alias en cascade)
-        my $realTarget = _getRealData("S3", $targetPath);
-        if ( ! defined $realTarget ) {
-            ERROR("Objet to link '$targetPath' does not exists");
+        my $symlink_content = ROK4_SYMLINK_SIGNATURE . $targetPath;
+
+        my ($toBucketName, @rest) = split("/", $toPath);
+        $toPath = join("/", @rest);
+
+        my $bucket = $S3->bucket($toBucketName);
+
+        my $ok = $bucket->add_key($toPath, $symlink_content);
+        if (! $ok) {
+            ERROR("Cannot upload S3 object '$toBucketName / $toPath' content");
             return undef;
-        }
-
-        my ($targetContainerName, @targetRest) = split("/", $realTarget);
-        $realTarget = join("/", @targetRest);
-
-        my ($toContainerName, @toRest) = split("/", $toPath);
-        $toPath = join("/", @toRest);
-
-        if ($targetContainerName ne $toContainerName) {
-            ERROR("SWIFT link (symbolic object) is not possible between different containers: $toContainerName/$toPath -> X $targetPath");
-            return undef;
-        }
-
-        my $symlink_content = ROK4_SYMLINK_SIGNATURE . $realTarget;
-
-        my $resource = "/$toContainerName/$toPath";
-        my $contentType="application/octet-stream";
-        my $dateValue=qx(TZ=GMT date -R);
-        chomp($dateValue);
-        my $stringToSign="PUT\n\n$contentType\n$dateValue\n$resource";
-
-        my $signature = Digest::SHA::hmac_sha1_base64($stringToSign, $ENV{ROK4_S3_SECRETKEY});
-        while (length($signature) % 4) {
-            $signature .= '=';
-        }
-
-        my $host = $ENV{ROK4_S3_URL};
-        $host =~ s/^https?:\/\/(.+):[0-9]+\/?$/$1/;
-
-        # set custom HTTP request header fields
-        my $request = HTTP::Request->new(PUT => $ENV{ROK4_S3_URL}.$resource);
-        $request->content($symlink_content);
-        $request->header('Host' => $host);
-        $request->header('Date' => $dateValue);
-        $request->header('Content-Type' => $contentType);
-        $request->header('Authorization' => sprintf ("AWS %s:$signature", $ENV{ROK4_S3_KEY}));
-            
-        my $response = _getUserAgent()->request($request);
-        if ($response->is_success) {
-            return "$targetContainerName/$realTarget";
-        }
-        else {
-            ERROR("HTTP code: ", $response->code);
-            ERROR("HTTP message: ", $response->message);
-            ERROR("HTTP decoded content : ", $response->decoded_content);
-            return undef;
-        }
+        } 
+        return $targetPath;
     }
     elsif ($targetType eq "SWIFT" && $toType eq "SWIFT") {
 
-        # On vérifie que la dalle Swift à lier n'est pas un alias, auquel cas on référence le vrai objet (pour éviter des alias en cascade)
-        my $realTarget = _getRealData("SWIFT", $targetPath);
-        if ( ! defined $realTarget ) {
-            ERROR("Objet to link '$targetPath' does not exists");
-            return undef;
-        }
+        my $symlink_content = ROK4_SYMLINK_SIGNATURE . $targetPath;
 
-        my ($targetContainerName, @targetRest) = split("/", $realTarget);
-        $realTarget = join("/", @targetRest);
-
-        my ($toContainerName, @toRest) = split("/", $toPath);
-        $toPath = join("/", @toRest);
-
-        if ($targetContainerName ne $toContainerName) {
-            ERROR("SWIFT link (symbolic object) is not possible between different containers: $toContainerName/$toPath -> X $targetPath");
-            return undef;
-        }
-
-        my $symlink_content = ROK4_SYMLINK_SIGNATURE . $realTarget;
-
-        my $resource = "/$toContainerName/$toPath";
+        my $resource = "/$toPath";
 
         my $request = HTTP::Request->new(PUT => $ENV{ROK4_SWIFT_PUBLICURL}.$resource);
         $request->content($symlink_content);
@@ -1376,7 +1225,7 @@ sub symLink {
 
             my $response = _getUserAgent()->request($request);
             if ($response->is_success) {
-                return "$targetContainerName/$realTarget";
+                return "$targetPath";
             }
             elsif ($try == 1 && ($response->code == 401 || $response->code == 403)) {
                 DEBUG("Authentication may have expired. Reconnecting...");
@@ -1630,29 +1479,19 @@ sub _getRealData {
 
             my $realTarget = qx(rados -p $poolName get $objectName /dev/stdout);
             chomp $realTarget;
-
             
             if (index($realTarget, ROK4_SYMLINK_SIGNATURE) == -1) {
                 # L'objet est petit mais ne commence pas par la signature des objets symboliques
                 return $path;
             }
 
-            $realTarget = substr $realTarget, ROK4_SYMLINK_SIGNATURE_SIZE;
-            return "$poolName/$realTarget";
+            return substr $realTarget, ROK4_SYMLINK_SIGNATURE_SIZE;
 
         } else {
             return $path;
         }
     }
     elsif ($type eq "S3") {
-
-        my ($bucketName, @rest) = split("/", $path);
-        my $objectName = join("/", @rest);
-
-        if (! defined $bucketName || ! defined $objectName) {
-            ERROR("S3 path is not valid (<bucketName>/<objectName>) : $path");
-            return undef;
-        }
 
         my $value = getSize("S3",$path);
 
@@ -1664,54 +1503,30 @@ sub _getRealData {
             return $path;
         }
 
-        my $resource = "/$bucketName/$objectName";
-        my $content_type = "application/octet-stream";
-        my $date_gmt = qx(TZ=GMT date -R);
-        chomp($date_gmt);
-        my $string_to_sign="GET\n\n$content_type\n$date_gmt\n$resource";
-
-        my $signature = Digest::SHA::hmac_sha1_base64($string_to_sign, $ENV{ROK4_S3_SECRETKEY});
-        while (length($signature) % 4) {
-            $signature .= '=';
-        }
-
-        my $host = $ENV{ROK4_S3_URL};
-        $host =~ s/^https?:\/\/(.+):[0-9]+\/?$/$1/;
-
-        my $request = HTTP::Request->new(GET => $ENV{ROK4_S3_URL}.$resource);
-
-        $request->header('Host' => $host);
-        $request->header('Date' => $date_gmt);
-        $request->header('Content-Type' => $content_type);
-        $request->header('Authorization' => sprintf ("AWS %s:$signature", $ENV{ROK4_S3_KEY}));
-
-        my $response = _getUserAgent()->request($request);
-        if ($response->is_success) {
-                my $linkContent = $response->content;
-                chomp $linkContent;
-                if (index($linkContent, ROK4_SYMLINK_SIGNATURE) == -1) {
-                    # L'objet est petit mais ne commence pas par la signature des objets symboliques
-                    return $path;
-                }
-
-                my $realTarget = substr $linkContent, ROK4_SYMLINK_SIGNATURE_SIZE;
-                return "$bucketName/$realTarget";
-        } else {
-            ERROR("HTTP code: ", $response->code);
-            ERROR("HTTP message: ", $response->message);
-            ERROR("HTTP decoded content : ", $response->decoded_content);
-            return undef;
-        }
-    }
-    elsif ($type eq "SWIFT") {
-
-        my ($containerName, @rest) = split("/", $path);
+        my ($bucketName, @rest) = split("/", $path);
         my $objectName = join("/", @rest);
 
-        if (! defined $containerName || ! defined $objectName) {
-            ERROR("SWIFT path is not valid (<containerName>/<objectName>) : $path");
+        if (! defined $bucketName || ! defined $objectName) {
+            ERROR("S3 path is not valid (<bucketName>/<objectName>) : $path");
             return undef;
         }
+
+        my $bucket = $S3->bucket($bucketName);
+
+        my $result = $bucket->get_key($objectName);
+        if (! defined $result) {
+            ERROR("Cannot get S3 object '$bucketName / $objectName' content");
+            return undef;
+        }
+
+        if (index($result->{value}, ROK4_SYMLINK_SIGNATURE) == -1) {
+            # L'objet est petit mais ne commence pas par la signature des objets symboliques
+            return $path;
+        }
+
+        return substr $result->{value}, ROK4_SYMLINK_SIGNATURE_SIZE;
+    }
+    elsif ($type eq "SWIFT") {
 
         my $value = getSize("SWIFT",$path);
 
@@ -1723,7 +1538,7 @@ sub _getRealData {
             return $path;
         }
 
-        my $resource = "/$containerName/$objectName";
+        my $resource = "/$path";
 
         my $request = HTTP::Request->new(GET => $ENV{ROK4_SWIFT_PUBLICURL}.$resource);
 
@@ -1740,8 +1555,7 @@ sub _getRealData {
                     return $path;
                 }
 
-                my $realTarget = substr $linkContent, ROK4_SYMLINK_SIGNATURE_SIZE;
-                return "$containerName/$realTarget";
+                return substr $linkContent, ROK4_SYMLINK_SIGNATURE_SIZE;
             }
             elsif ($try == 1 && ($response->code == 401 || $response->code == 403)) {
                 DEBUG("Authentication may have expired. Reconnecting...");

@@ -359,13 +359,13 @@ sub _createFromValues {
         }
     }
     elsif ($this->{storage_type} eq "S3") {
-        $this->{data_bucket} = $params->{root};
+        $this->{data_bucket} = $params->{storage}->{root};
     }
     elsif ($this->{storage_type} eq "CEPH") {
-        $this->{data_pool} = $params->{root};
+        $this->{data_pool} = $params->{storage}->{root};
     }
     elsif ($this->{storage_type} eq "SWIFT") {
-        $this->{data_container} = $params->{root};
+        $this->{data_container} = $params->{storage}->{root};
     }
     
     # TMS
@@ -732,12 +732,12 @@ sub addLevel {
     elsif ($this->{storage_type} eq "S3") {
         # On doit ajouter un niveau stockage s3
         $levelParams->{prefix} = $this->{name};
-        $levelParams->{pool_name} = $this->{data_bucket};
+        $levelParams->{bucket_name} = $this->{data_bucket};
     }
     elsif ($this->{storage_type} eq "SWIFT") {
         # On doit ajouter un niveau stockage swift
         $levelParams->{prefix} = $this->{name};
-        $levelParams->{pool_name} = $this->{data_container};
+        $levelParams->{container_name} = $this->{data_container};
     }
 
     if ($this->{own_masks}) {
@@ -877,11 +877,6 @@ sub checkCompatibility {
 
     if ($this->getStorageType() eq "FILE") {
         if ($this->getDirDepth() != $other->getDirDepth()) {
-            return 0;
-        }
-    } else {
-        # Dans le cas d'un stockage objet, les contenants doivent être les mêmes
-        if ($this->getStorageRoot() ne $other->getStorageRoot() ) {
             return 0;
         }
     }
@@ -1283,6 +1278,25 @@ sub getStorageRoot {
     }
     elsif ($this->{storage_type} eq "SWIFT") {
         return $this->{data_container};
+    }
+}
+
+# Function: setStorageRoot
+sub setStorageRoot {
+    my $this = shift;
+    my $root = shift;
+
+    if ($this->{storage_type} eq "FILE") {
+        $this->{data_path} = $root;
+    }
+    elsif ($this->{storage_type} eq "CEPH") {
+        $this->{data_pool} = $root;
+    }
+    elsif ($this->{storage_type} eq "S3") {
+        $this->{data_bucket} = $root;
+    }
+    elsif ($this->{storage_type} eq "SWIFT") {
+        $this->{data_container} = $root;
     }
 }
 
@@ -1724,7 +1738,7 @@ Clone object. Recursive clone only for levels. Other object attributes are just 
 
 Parameters (list):
     clone_name - string - Name of the cloned pyramid
-    clone_root - string - Optionnal, only for FILE pyramide, storage directory of the cloned pyramid
+    clone_root - string - Optionnal, storage directory or object tray of the cloned pyramid
 
 Returns:
     the cloned pyramid
@@ -1738,8 +1752,10 @@ sub clone {
     bless($clone, 'ROK4::Core::PyramidRaster');
     delete $clone->{levels};
 
-    if ($this->{storage_type} eq "FILE" && ! defined $clone_root) {
-        $clone_root = $this->{data_path};
+    if (! defined $clone_root) {
+        $clone_root = $this->getStorageRoot();
+    } else {
+        $clone->setStorageRoot($clone_root);
     }
 
     while (my ($id, $level) = each(%{$this->{levels}}) ) {
