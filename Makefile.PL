@@ -7,7 +7,6 @@ WriteMakefile(
     BUILD_REQUIRES => { 
         "ExtUtils::MakeMaker" => 0
     },
-    PREREQ_FATAL => 1,
     # ack -h "^use [A-Z]" ./ | cut -d' ' -f2 | grep -v -E "ROK4::" | sed -r "s#;##" | sort | uniq | sed -r "s/(.+)/\"\1\" => 0,/"
     PREREQ_PM => {
         "Net::Amazon::S3" => 0,

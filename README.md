@@ -17,7 +17,7 @@ apt install ./librok4-core-perl_<version>_all.deb
 
 ## Installation depuis les sources
 
-`perl Makefile.PL INSTALL_BASE=/usr`
+`perl Makefile.PL INSTALL_BASE=/usr PREREQ_FATAL=1`
 
 Dépendances (paquets debian) :
 
