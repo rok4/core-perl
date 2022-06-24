@@ -1,46 +1,50 @@
 # Librairies CORE Perl
 
-- [Dépendances](#dépendances)
-- [Installation](#installation)
-- [Utilisation en submodule GIT](#utilisation-en-submodule-git)
+- [Installation depuis le paquet debian](#installation-depuis-le-paquet-debian)
+- [Installation depuis les sources](#installation-depuis-les-sources)
 - [Variables d'environnement utilisées dans les librairies](#variables-denvironnement-utilisées-dans-les-librairies)
 
-## Dépendances
 
-* Paquets debian
-    * perl-base
-    * libgdal-perl
-    * libpq-dev
-    * gdal-bin
-    * libfile-find-rule-perl
-    * libfile-copy-link-perl
-    * libconfig-ini-perl
-    * libdbi-perl
-    * libdbd-pg-perl
-    * libdevel-size-perl
-    * libdigest-sha-perl
-    * libfile-map-perl
-    * libfindbin-libs-perl
-    * libhttp-message-perl
-    * liblwp-protocol-https-perl
-    * libmath-bigint-perl
-    * libterm-progressbar-perl
-    * liblog-log4perl-perl
-    * libjson-parse-perl
-    * libjson-perl
-    * libjson-validator-perl
-    * libtest-simple-perl
-    * libxml-libxml-perl
-    * libamazon-s3-perl
+## Installation depuis le paquet debian
 
-## Installation
+`perl Makefile.PL INSTALL_BASE=/usr`
 
-`perl Makefile.PL INSTALL_BASE=/usr/local VERSION=0.0.1`
+Télécharger le paquet sur GitHub : https://github.com/rok4/core-perl/releases/
 
-## Utilisation en submodule GIT
+```
+apt install ./librok4-core-perl_<version>_all.deb
+```
 
-* Si le dépôt de code est à côté : `git submodule add ../core-perl.git core`
-* Sinon : `git submodule add https://github.com/rok4/core-perl.git core`
+## Installation depuis les sources
+
+`perl Makefile.PL INSTALL_BASE=/usr`
+
+Dépendances (paquets debian) :
+
+* perl-base
+* libgdal-perl
+* libpq-dev
+* gdal-bin
+* libfile-find-rule-perl
+* libfile-copy-link-perl
+* libconfig-ini-perl
+* libdbi-perl
+* libdbd-pg-perl
+* libdevel-size-perl
+* libdigest-sha-perl
+* libfile-map-perl
+* libfindbin-libs-perl
+* libhttp-message-perl
+* liblwp-protocol-https-perl
+* libmath-bigint-perl
+* libterm-progressbar-perl
+* liblog-log4perl-perl
+* libjson-parse-perl
+* libjson-perl
+* libjson-validator-perl
+* libtest-simple-perl
+* libxml-libxml-perl
+* libnet-amazon-s3-perl
 
 ## Variables d'environnement utilisées dans les librairies
 

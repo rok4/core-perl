@@ -1,0 +1,53 @@
+name: Build and release
+
+on:
+  push:
+    tags:
+      - '**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Organize files
+        run: |
+          perl Makefile.PL DESTDIR=build INSTALL_BASE=/usr
+          make
+          make install
+
+      - name: Build debian package
+        id: build_debian
+        uses: jiro4989/build-deb-action@v2
+        with:
+          package: librok4-core-perl
+          package_root: build
+          maintainer: Géoportail<tout_rdev@ign.fr>
+          version: ${{ github.ref_name }}
+          arch: 'all'
+          desc: 'Perl core libraries are used by ROK4 pregeneration and managment tools'
+          depends: perl-base, libgdal-perl, libpq-dev, gdal-bin, libfile-find-rule-perl, libfile-copy-link-perl, libconfig-ini-perl, libdbi-perl, libdbd-pg-perl, libdevel-size-perl, libdigest-sha-perl, libfile-map-perl, libfindbin-libs-perl, libhttp-message-perl, liblwp-protocol-https-perl, libmath-bigint-perl, libterm-progressbar-perl, liblog-log4perl-perl, libjson-parse-perl, libjson-perl, libjson-validator-perl, libtest-simple-perl, libxml-libxml-perl, libnet-amazon-s3-perl
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
+      - name: Add debian package to release
+        id: upload-release-asset 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{ steps.build_debian.outputs.file_name }}
+          asset_name: ${{ steps.build_debian.outputs.file_name }}
+          asset_content_type: application/vnd.debian.binary-package
+          
