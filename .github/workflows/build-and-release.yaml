@@ -15,7 +15,7 @@ jobs:
         run: |
           perl Makefile.PL DESTDIR=build INSTALL_BASE=/usr
           make
-          make install
+          make pure_install
 
       - name: Build debian package
         id: build_debian
