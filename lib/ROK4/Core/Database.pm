@@ -40,7 +40,7 @@ File: Database.pm
 
 Class: ROK4::Core::Database
 
-(see libperlauto/Core_Database.png)
+(see libperlauto/ROK4_Core_Database.png)
 
 Allow to request a PostgreSQL database.
 
@@ -54,11 +54,6 @@ Using:
 
 Attributes:
     id - string - Connection identifier, concatenation of following values, used to caching results.
-    dbname - string - database name
-    host - string - PostgreSQL server host
-    port - integer - PostgreSQL server port
-    username - string - PostgreSQL server user
-    password - string - PostgreSQL server user's password
 
     connection - DBI database - PostgreSQL connection, use to execute requests
 
@@ -123,15 +118,7 @@ sub new {
 
     my $this = {
         id => "$dbname,$host,$port,$username,$password",
-
-        dbname => $dbname,
-        host => $host,
-        port => $port,
-        username => $username,
-        password => $password,
-
         connection => undef,
-
         current_results => undef
     };
 

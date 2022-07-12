@@ -40,7 +40,7 @@ File: Shell.pm
 
 Class: ROK4::Core::Shell
 
-(see libperlauto/Core_Shell.png)
+(see libperlauto/ROK4_Core_Shell.png)
 
 Define common functions for all tools and storage types.
 

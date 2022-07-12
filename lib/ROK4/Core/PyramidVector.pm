@@ -40,7 +40,7 @@ File: PyramidVector.pm
 
 Class: ROK4::Core::PyramidVector
 
-(see libperlauto/Core_PyramidVector.png)
+(see libperlauto/ROK4_Core_PyramidVector.png)
 
 Store all informations about a vector pyramid, whatever the storage type.
 
@@ -77,9 +77,6 @@ Using:
     (end code)
 
 Attributes:
-    type - string - READ (pyramid load from a descriptor) or WRITE ("new" pyramid, create from values)
-    own_ancestor - boolean - Precise if pyramid own an ancestor (only for new pyramid)
-
     name - string - Pyramid's name
 
     image_width - integer - Number of tile in an pyramid's image, widthwise.

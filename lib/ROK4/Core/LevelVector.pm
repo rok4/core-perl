@@ -40,7 +40,7 @@ File: LevelVector.pm
 
 Class: ROK4::Core::LevelVector
 
-(see libperlauto/Core_LevelVector.png)
+(see libperlauto/ROK4_Core_LevelVector.png)
 
 Describe a level in a vector pyramid.
 

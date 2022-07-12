@@ -40,7 +40,7 @@ File: TileMatrix.pm
 
 Class: ROK4::Core::TileMatrix
 
-(see libperlauto/Core_TileMatrix.png)
+(see libperlauto/ROK4_Core_TileMatrix.png)
 
 A Tile Matrix defines a grid for a level. Informations are extracted from a XML file.
 

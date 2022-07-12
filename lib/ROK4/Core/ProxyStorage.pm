@@ -40,7 +40,7 @@ File: ProxyStorage.pm
 
 Class: ROK4::Core::ProxyStorage
 
-(see libperlauto/Core_ProxyStorage.png)
+(see libperlauto/ROK4_Core_ProxyStorage.png)
 
 Proxy to manipulate different storage types : object or file, we can copy, reference or remove from one to another.
 

@@ -40,7 +40,7 @@ File: ProxyGDAL.pm
 
 Class: ROK4::Core::ProxyGDAL
 
-(see libperlauto/Core_ProxyGDAL.png)
+(see libperlauto/ROK4_Core_ProxyGDAL.png)
 
 Proxy to use different versions of GDAL transparently
 

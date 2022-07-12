@@ -40,7 +40,7 @@ File: LevelRaster.pm
 
 Class: ROK4::Core::LevelRaster
 
-(see libperlauto/Core_LevelRaster.png)
+(see libperlauto/ROK4_Core_LevelRaster.png)
 
 Describe a level in a raster pyramid.
 

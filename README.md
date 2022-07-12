@@ -2,16 +2,12 @@
 
 Ces librairies Perl sont utilisées par les outils de [prégénération](https://github.com/rok4/pregeneration) et ceux de [gestion et analyse](https://github.com/rok4/tools)
 
-- [Installation depuis le paquet debian](#installation-depuis-le-paquet-debian)
-- [Installation depuis les sources](#installation-depuis-les-sources)
-- [Variables d'environnement utilisées dans les librairies](#variables-denvironnement-utilisées-dans-les-librairies)
-
 ## Installation depuis le paquet debian
 
 Télécharger le paquet sur GitHub : https://github.com/rok4/core-perl/releases/
 
 ```
-apt install ./librok4-core-perl_<version>_all.deb
+apt install ./librok4-core-perl-<version>-linux-all.deb
 ```
 
 ## Installation depuis les sources

@@ -40,7 +40,7 @@ File: Array.pm
 
 Class: ROK4::Core::Array
 
-(see libperlauto/Core_Array.png)
+(see libperlauto/ROK4_Core_Array.png)
 
 Provides functions to compute the max value or the min index of an array. Do not instanciate.
 

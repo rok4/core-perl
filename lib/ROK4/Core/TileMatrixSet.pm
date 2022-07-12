@@ -40,19 +40,19 @@ File: TileMatrixSet.pm
 
 Class: ROK4::Core::TileMatrixSet
 
-(see libperlauto/Core_TileMatrixSet.png)
+(see libperlauto/ROK4_Core_TileMatrixSet.png)
 
 Load and store all information about a Tile Matrix Set. A Tile Matrix Set is a JSON file which describe a grid for several levels.
 
 The file have to be in the directory provided with the environment variable ROK4_TMS_DIRECTORY
 
-(see ROK4GENERATION/TileMatrixSet.png)
+(see TileMatrixSet.png)
 
 We tell the difference between :
     - quad tree TMS : resolutions go by tows and borders are aligned. To generate a pyramid which is based on this kind of TMS, we use <QTree>
-    (see ROK4GENERATION/QTreeTMS.png)
+    (see QTreeTMS.png)
     - "nearest neighbour" TMS : centers are aligned (used for DTM generations, with a "nearest neighbour" interpolation). To generate a pyramid which is based on this kind of TMS, we use <Graph>
-    (see ROK4GENERATION/NNGraphTMS.png)
+    (see NNGraphTMS.png)
 
 Using:
     (start code)
@@ -69,9 +69,9 @@ Using:
     (end code)
 
 Attributes:
-    PATHFILENAME - string - Complete file path : /path/to/SRS_RES.json
-    name - string - Basename part of PATHFILENAME : SRS_RES
-    filename - string - Filename part of PATHFILENAME : SRS_RES.json
+    filepath - string - Complete file path : /path/to/SRS_RES.json
+    name - string - Basename part of filepath : SRS_RES
+    filename - string - Filename part of filepath : SRS_RES.json
 
     levelsBind - hash - Link between Tile matrix identifiants (string, the key) and order in ascending resolutions (integer, the value).
     topID - string - Higher level ID.
@@ -142,7 +142,7 @@ sub new {
     $class = ref($class) || $class;
     # IMPORTANT : if modification, think to update natural documentation (just above)
     my $this = {
-        PATHFILENAME => undef,
+        filepath => undef,
         name     => undef,
         filename => undef,
         #
@@ -177,10 +177,10 @@ sub new {
     $this->{name} = $tms_name;
     $this->{name} =~ s/\.(tms|TMS|json|JSON)$//;
 
-    $this->{PATHFILENAME} = File::Spec->catfile($ENV{ROK4_TMS_DIRECTORY}, $this->{filename});
+    $this->{filepath} = File::Spec->catfile($ENV{ROK4_TMS_DIRECTORY}, $this->{filename});
 
-    if (! -f $this->{PATHFILENAME}) {
-        ERROR(sprintf "File TMS doesn't exist (%s)!", $this->{PATHFILENAME});
+    if (! -f $this->{filepath}) {
+        ERROR(sprintf "File TMS doesn't exist (%s)!", $this->{filepath});
         return undef;
     }
     
@@ -212,8 +212,8 @@ sub _load {
     my $acceptUntypedTMS = shift;
     
     my $json_text = do {
-        open(my $json_fh, "<", $this->{PATHFILENAME}) or do {
-            ERROR(sprintf "Cannot open JSON file : %s (%s)", $this->{PATHFILENAME}, $! );
+        open(my $json_fh, "<", $this->{filepath}) or do {
+            ERROR(sprintf "Cannot open JSON file : %s (%s)", $this->{filepath}, $! );
             return FALSE;
         };
         local $/;
@@ -222,7 +222,7 @@ sub _load {
 
     eval { assert_valid_json ($json_text); };
     if ($@) {
-        ERROR(sprintf "File %s is not a valid JSON", $this->{PATHFILENAME});
+        ERROR(sprintf "File %s is not a valid JSON", $this->{filepath});
         ERROR($@);
         return FALSE;
     }
@@ -370,12 +370,6 @@ sub _load {
 #                                Group: Getters - Setters                                          #
 ####################################################################################################
 
-# Function: getPathFilename
-sub getPathFilename {
-    my $this = shift;
-    return $this->{PATHFILENAME};
-}
-
 # Function: getSRS
 sub getSRS {
   my $this = shift;
@@ -392,12 +386,6 @@ sub getInversion {
 sub getName {
   my $this = shift;
   return $this->{name};
-}
-
-# Function: getPath
-sub getPath {
-  my $this = shift;
-  return $this->{filepath};
 }
 
 # Function: getFile
