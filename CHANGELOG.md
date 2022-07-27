@@ -10,21 +10,12 @@ Cette release contient les librairies Perl, utilisées par les outils de [prég�
 
 ### [Added]
 
-* Ajout de fonction de clonage des pyramides et niveaux pour faciliter 
-* Possibilité de faire des liens symboliques inter contenant sur les stockages objets
-* Nouvelle classe GeoVector, pour gérer les fichiers vecteur en source des générations de pyramide de tuiles vectorielles
+* Gestion des redirections par Curl pour les requêtes de téléversement du fichier liste sur un stockage objet ou la demande d'un token Swift
+* Prise en compte d'un filtre dans les fonctions de statistiques des données dans une base PostgreSQL :
+    * count distinct values
+    * get distinct values
+    * get min max
 
-### [Changed]
-
-* Passage à la librairie Net::Amazon::S3 pour les intéractions avec le stockage S3
-* Réorganisation de l'agencement des pyramides sur le stockage
-* Uniformisation des noms des formats de pyramide
-* Les descripteurs de pyramides et de couches sont au format JSON
-
-### [Removed]
-
-* Suppression de la classe de pyramide raster à la demande
-* Suppression de la classe dédiée au spécifications raster (utilisation directe de la classe Pixel)
 
 <!-- 
 ### [Added]

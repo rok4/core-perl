@@ -83,7 +83,7 @@ GetSwiftToken () {
         curl_options="-k"
     fi
 
-    SWIFT_TOKEN=$(curl -s -i $curl_options \
+    SWIFT_TOKEN=$(curl -s -L -i $curl_options \
         -H "Content-Type: application/json" \
         -X POST \
         -d '
@@ -137,7 +137,7 @@ GetSwiftToken (){
         curl_options="-k"
     fi
 
-    SWIFT_TOKEN=$(curl -s -i $curl_options \
+    SWIFT_TOKEN=$(curl -s -L -i $curl_options \
         -H "X-Storage-User: '${ROK4_SWIFT_ACCOUNT}':'${ROK4_SWIFT_USER}'" \
         -H "X-Storage-Pass: '${ROK4_SWIFT_PASSWD}'" \
         -H "X-Auth-User: '${ROK4_SWIFT_ACCOUNT}':'${ROK4_SWIFT_USER}'" \
@@ -175,7 +175,7 @@ StoreListFile () {
         curl_options="-k"
     fi
 
-    curl $curl_options --fail -X PUT -T "${LIST_FILE}" -H "${SWIFT_TOKEN}" "${ROK4_SWIFT_PUBLICURL}${resource}"
+    curl $curl_options --fail -L -X PUT -T "${LIST_FILE}" -H "${SWIFT_TOKEN}" "${ROK4_SWIFT_PUBLICURL}${resource}"
     if [ $? != 0 ] ; then echo $0 : Erreur a la ligne $(( $LINENO - 1)) >&2 ; exit 1; fi
 }
 FUNCTION
@@ -199,7 +199,7 @@ StoreListFile () {
         curl_options="-k"
     fi
 
-    curl $curl_options --fail -X PUT -T "${LIST_FILE}" \
+    curl $curl_options --fail -L -X PUT -T "${LIST_FILE}" \
      -H "Host: ${HOST}" \
      -H "Date: ${dateValue}" \
      -H "Content-Type: ${contentType}" \
