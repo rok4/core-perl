@@ -332,8 +332,6 @@ sub indicesToBbox {
     my $tilesPerHeight = shift;
     my $crop = shift;
 
-    
-
     # Calcul des tuiles extrêmes
     my $colMin = $col * $tilesPerWidth;
     my $rowMin = $row * $tilesPerHeight;

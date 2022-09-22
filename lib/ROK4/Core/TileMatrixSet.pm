@@ -376,6 +376,16 @@ sub getSRS {
   return $this->{srs};
 }
 
+# Function: getSrid
+sub getSrid {
+  my $this = shift;
+  if ($this->{srs} =~ m/epsg:(\d+)/i) {
+    return $1;
+  } else {
+    return undef
+  }
+}
+
 # Function: getInversion
 sub getInversion {
   my $this = shift;
@@ -651,6 +661,39 @@ sub getBestLevelID {
 
     INFO("Best level found : $best_level (ratio $best_ratio)");
     return $best_level;
+}
+
+
+=begin nd
+Function: getTrexConfiguration
+
+Return a string configuring the grid for Trex tile generator. Only predefined for now.
+
+Example: 
+|    [grid]
+|    predefined = "web_mercator"
+=cut
+sub getTrexConfiguration {
+    my $this = shift;
+
+    if ($this->{name} eq "PM") {
+        return "\n[grid]\npredefined = \"web_mercator\"\n";
+    } elsif ($this->{name} eq "4326") {
+        return "\n[grid]\npredefined = \"wgs84\"\n";
+    } else {
+        return undef;
+    }
+}
+
+# Function: isVectorCompliant
+sub isVectorCompliant {
+    my $this = shift;
+
+    if ($this->{name} eq "PM" or $this->{name} eq "4326") {
+        return TRUE;
+    } else {
+        return FALSE;
+    }
 }
 
 ####################################################################################################

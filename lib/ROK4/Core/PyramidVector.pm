@@ -351,15 +351,16 @@ sub _createFromValues {
         ERROR(sprintf "Cannot create a TileMatrixSet object from the TMS name %s", $params->{tms});
         return FALSE;
     }
+    if (! $this->{tms}->isVectorCompliant()) {
+        ERROR(sprintf "Only TMS PM and 4326 are usable for a vector pyramid");
+        return FALSE;
+    }
     
     # Slab size
     if (exists $params->{slab_size}) {
         $this->{image_width} = $params->{slab_size}->[0];
         $this->{image_height} = $params->{slab_size}->[1];
     }
-
-
-
 
     return TRUE;
 }

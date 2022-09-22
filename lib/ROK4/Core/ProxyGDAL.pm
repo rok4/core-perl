@@ -61,6 +61,7 @@ use warnings;
 
 use Data::Dumper;
 use Math::BigFloat;
+use List::Util qw(min max);
 
 use ROK4::Core::Array;
 
@@ -325,6 +326,24 @@ sub getUnion {
     my $geom2 = shift;
 
     return $geom1->Union($geom2);
+}
+
+=begin nd
+Function: getIntersection
+
+Return intersection of two geometries. They have to own the same spatial reference
+
+Parameters (list):
+    geom1 - <Geo::OGR::Geometry> - geometry 1
+    geom2 - <Geo::OGR::Geometry> - geometry 2
+
+Returns geometry intersection
+=cut
+sub getIntersection {
+    my $geom1 = shift;
+    my $geom2 = shift;
+
+    return $geom1->Intersection($geom2);
 }
 
 ####################################################################################################
@@ -807,7 +826,9 @@ sub convertBBox {
         return @bbox;
     }
 
+    my $max_segment = min($bbox[2] - $bbox[0], $bbox[3] - $bbox[1]) / 7;
     my $geom = geometryFromBbox(@bbox);
+    $geom->Segmentize($max_segment);
 
     eval { 
         $ENV{OGR_ENABLE_PARTIAL_REPROJECTION} = TRUE;

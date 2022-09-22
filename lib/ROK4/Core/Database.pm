@@ -865,22 +865,51 @@ Parameter (list):
     table_name - string - Table for which we want to know the geometry column
 
 Return (array)
-    Geometry column name and its type, undef if no geometry column for this table
+    Geometry column name, its type and its srid, undef if no geometry column for this table
 =cut
 sub get_geometry_column {
     my $this = shift;
     my $schema_name = shift;
     my $table_name = shift;
 
-    my $sql = "SELECT f_geometry_column, type FROM geometry_columns WHERE f_table_schema = '$schema_name' AND f_table_name = '$table_name';";
+    my $sql = "SELECT f_geometry_column, type, srid FROM geometry_columns WHERE f_table_schema = '$schema_name' AND f_table_name = '$table_name';";
 
     my @line = $this->select_one_row($sql);
 
     if (scalar(@line) == 0) {
-        return (undef, undef);
+        return (undef, undef, undef);
     }
 
-    return ($line[0], $line[1]);
+    return ($line[0], $line[1], $line[2]);
+}
+
+
+=begin nd
+Function: get_extent
+
+Parameter (list):
+    schema_name - string - Schema in which we want the table extent
+    table_name - string - Table for which we want the extent
+    geometry_column - string - Geometry column
+
+Return (array)
+    xmin, ymin, xmax, ymax
+=cut
+sub get_extent {
+    my $this = shift;
+    my $schema_name = shift;
+    my $table_name = shift;
+    my $geometry_column = shift;
+
+    my $sql = "SELECT st_xmin(geom), st_ymin(geom), st_xmax(geom),st_ymax(geom) FROM (SELECT st_extent($geometry_column) AS geom FROM $schema_name.$table_name) AS tmp;";
+
+    my @line = $this->select_one_row($sql);
+
+    if (scalar(@line) == 0) {
+        return (undef, undef, undef, undef);
+    }
+
+    return ($line[0], $line[1], $line[2], $line[3]);
 }
 
 =begin nd

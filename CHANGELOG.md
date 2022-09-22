@@ -15,6 +15,9 @@ Cette release contient les librairies Perl, utilisées par les outils de [prég�
     * count distinct values
     * get distinct values
     * get min max
+* Fonction de calcul d'étendue d'une table PostgreSQL
+* Fonction d'intersection de géométrie
+* Contrôle de la prise en charge du TMS fourni lors d'un calcul de pyramide vecteur
 
 
 <!-- 
