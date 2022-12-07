@@ -500,7 +500,7 @@ sub _createFromXML {
         ERROR (sprintf "Can not extract 'nodata' from the XML !");
         return FALSE;
     }
-    $params->{nodata} = $nodata;
+    $this->{nodata} = $nodata;
 
     # load pyramid level
     my @levels = $root->getElementsByTagName('level');

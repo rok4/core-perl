@@ -762,7 +762,7 @@ sub setData {
             return FALSE;
         }
 
-        if (system("echo -n \"$data\" | rados -p $poolName put $objectName /dev/stdin") != 0) {
+        if (system("echo -n '$data' | rados -p $poolName put $objectName /dev/stdin") != 0) {
             ERROR("Cannot write to CEPH $poolName / $objectName : $!");
             return FALSE;
         }

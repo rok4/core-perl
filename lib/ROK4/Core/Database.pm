@@ -1005,7 +1005,7 @@ sub get_min_max_values {
     }
 
     if (exists $CACHE->{$this->{id}}->{get_min_max_values}->{$schema_name}->{$table_name}->{$att_name}->{$filter}) {
-        return @{$CACHE->{$this->{id}}->{get_min_max_values}->{$schema_name}->{$table_name}->{$att_name}}->{$filter};
+        return @{$CACHE->{$this->{id}}->{get_min_max_values}->{$schema_name}->{$table_name}->{$att_name}->{$filter}};
     }
 
     my @line = $this->select_one_row($sql);
@@ -1081,7 +1081,7 @@ sub get_distinct_values {
     }
 
     if (exists $CACHE->{$this->{id}}->{get_distinct_values}->{$schema_name}->{$table_name}->{$att_name}->{$filter}) {
-        return $CACHE->{$this->{id}}->{get_distinct_values}->{$schema_name}->{$table_name}->{$att_name}->{$filter};
+        return @{$CACHE->{$this->{id}}->{get_distinct_values}->{$schema_name}->{$table_name}->{$att_name}->{$filter}};
     }
 
     my $att_values = $this->select_all_row($sql);
