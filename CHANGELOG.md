@@ -8,8 +8,7 @@ Corrections diverses
 
 ### [Fixed]
 
-* Récupération correcrte de la valeur de nodata depuis un descipteur de pyramide XML
-* Écriture correcte d'un descripteur de pyramide JSON sur CEPH
+* Ajout de points sur les côtés des bbox pour corriger leur reprojection
 
 
 <!-- 

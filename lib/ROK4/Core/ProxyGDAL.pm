@@ -199,13 +199,19 @@ sub geometryFromBbox {
         return undef ;
     }
 
-    return geometryFromString("WKT", sprintf "POLYGON((%s %s,%s %s,%s %s,%s %s,%s %s))",
-        $xmin,$ymin,
-        $xmin,$ymax,
-        $xmax,$ymax,
-        $xmax,$ymin,
-        $xmin,$ymin
-    );
+    my @points;
+
+    my $x_step = ($xmax - $xmin) / 10;
+    my $y_step = ($ymax - $ymin) / 10;
+
+    for (my $i = 0; $i < 10; $i++) {push(@points, sprintf("%s $ymin", $xmin + $x_step * $i));}
+    for (my $i = 0; $i < 10; $i++) {push(@points, sprintf("$xmax %s", $ymin + $y_step * $i));}
+    for (my $i = 0; $i < 10; $i++) {push(@points, sprintf("%s $ymax", $xmax - $x_step * $i));}
+    for (my $i = 0; $i < 10; $i++) {push(@points, sprintf("$xmin %s", $ymax - $y_step * $i));}
+    push(@points, "$xmin $ymin");
+
+    my $wkt = sprintf "POLYGON((%s))", join(",", @points);
+    return geometryFromString("WKT", $wkt);
 }
 
 
