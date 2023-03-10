@@ -102,7 +102,7 @@ GetSwiftToken () {
                 }
             }
         }
-    }' ${ROK4_SWIFT_AUTHURL} | grep "X-Subject-Token")
+    }' ${ROK4_SWIFT_AUTHURL} | grep -i "X-Subject-Token")
 
     # trailing new line removal
     # sed options :
@@ -110,7 +110,7 @@ GetSwiftToken () {
     #   N  = append the next line of input into the pattern space.
     #   $! = if it's not the last line...
     #       ba = jump back to label a
-    SWIFT_TOKEN=$(echo "$SWIFT_TOKEN" | sed -E '/^[[:space:]]*$/d' | sed -E 's/^[[:space:]]+//g' | sed -E 's/[[:space:]]+$//g' | sed -E ':a;N;$!ba;s/[\n\r]//g' | sed -E 's/X-Subject-Token/X-Auth-Token/')
+    SWIFT_TOKEN=$(echo "$SWIFT_TOKEN" | sed -E '/^[[:space:]]*$/d' | sed -E 's/^[[:space:]]+//g' | sed -E 's/[[:space:]]+$//g' | sed -E ':a;N;$!ba;s/[\n\r]//g' | sed -E 's/[Xx]-[Ss]ubject-[Tt]oken/X-Auth-Token/')
     export SWIFT_TOKEN
     
     SWIFT_TOKEN_DATE=$(date +"%s")
@@ -143,7 +143,7 @@ GetSwiftToken (){
         -H "X-Auth-User: '${ROK4_SWIFT_ACCOUNT}':'${ROK4_SWIFT_USER}'" \
         -H "X-Auth-Key: '${ROK4_SWIFT_PASSWD}'" \
         -X GET \
-    }' ${ROK4_SWIFT_AUTHURL} | grep "X-Auth-Token")
+    }' ${ROK4_SWIFT_AUTHURL} | grep -i "X-Auth-Token")
 
     # trailing new line removal
     # sed options :
