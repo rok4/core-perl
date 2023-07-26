@@ -63,6 +63,7 @@ use warnings;
 use Data::Dumper;
 use Digest::SHA;
 use Net::Amazon::S3;
+use Net::Amazon::S3::Vendor::Generic;
 use File::Basename;
 use File::Copy ();
 use File::Map qw(map_file);
@@ -97,7 +98,6 @@ my $SWIFT_TOKEN = undef;
 
 ### S3
 my $S3_HOST = undef;
-my $S3_SECURE = 1;
 my $S3 = undef;
 
 ####################################################################################################
@@ -125,7 +125,7 @@ sub checkEnvironmentVariables {
             ERROR("Environment variable ROK4_CEPH_CLUSTERNAME is not defined");
             return FALSE;
         }
-        
+
     } elsif ($type eq "SWIFT") {
 
         if (! defined $ENV{ROK4_SWIFT_AUTHURL}) {
@@ -152,7 +152,7 @@ sub checkEnvironmentVariables {
                 return FALSE;
             }
         } else {
-            
+
             if (! defined $ENV{ROK4_SWIFT_ACCOUNT}) {
                 ERROR("Environment variable ROK4_SWIFT_ACCOUNT is not defined");
                 ERROR("We need it for a swift authentication");
@@ -161,7 +161,7 @@ sub checkEnvironmentVariables {
         }
 
     } elsif ($type eq "S3") {
-        
+
         if (! defined $ENV{ROK4_S3_URL}) {
             ERROR("Environment variable ROK4_S3_URL is not defined");
             return FALSE;
@@ -175,7 +175,16 @@ sub checkEnvironmentVariables {
             return FALSE;
         }
 
+        # Optionnels
+
+        my $S3_USE_VIRTUAL_HOST = 0;
+        if (defined $ENV{ROK4_S3_USE_VIRTUAL_HOST}) {
+            $S3_USE_VIRTUAL_HOST = $ENV{ROK4_S3_USE_VIRTUAL_HOST};
+        }
+
+
         $S3_HOST = $ENV{ROK4_S3_URL};
+        my $S3_SECURE = 1;
         if ($S3_HOST =~ m/^http:\/\//) {
             $S3_SECURE = 0;
             $S3_HOST =~ s/^http:\/\///;
@@ -183,12 +192,29 @@ sub checkEnvironmentVariables {
             $S3_HOST =~ s/^https:\/\///;
         }
 
+        my $S3_VENDOR = undef;
+        if (defined $ENV{ROK4_S3_REGION}) {
+            $S3_VENDOR = Net::Amazon::S3::Vendor::Generic->new (
+                host => $S3_HOST,
+                use_https => $S3_SECURE,
+                use_virtual_host => $S3_USE_VIRTUAL_HOST,
+                authorization_method => "Net::Amazon::S3::Signature::V4",
+                default_region => $ENV{ROK4_S3_REGION},
+            );
+        } else {
+            $S3_VENDOR = Net::Amazon::S3::Vendor::Generic->new (
+                host => $S3_HOST,
+                use_https => $S3_SECURE,
+                use_virtual_host => $S3_USE_VIRTUAL_HOST,
+                authorization_method => "Net::Amazon::S3::Signature::V2"
+            );
+        }
+
         $S3 = Net::Amazon::S3->new (
-            secure => $S3_SECURE,
+            host => $S3_HOST,
             aws_access_key_id => $ENV{ROK4_S3_KEY},
             aws_secret_access_key => $ENV{ROK4_S3_SECRETKEY},
-            host => $S3_HOST,
-            secure => $S3_SECURE
+            vendor => $S3_VENDOR
         );
     }
 
@@ -228,7 +254,7 @@ sub copy {
                 ERROR("Cannot create directory '$dir' : ", $$errors_list[0]{$dir});
                 return FALSE;
             }
-        
+
             my $err_bool = 0;
             my $err_message = '';
             File::Copy::copy("$fromPath", "$toPath") or ($err_bool, $err_message) = (1, $!);
@@ -296,7 +322,7 @@ sub copy {
 
             my $body;
             map_file $body, $fromPath;
-            
+
             my $request = HTTP::Request->new(PUT => $ENV{ROK4_SWIFT_PUBLICURL}.$resource);
             $request->content($body);
 
@@ -324,7 +350,7 @@ sub copy {
                     ERROR("HTTP decoded content : ", $response->decoded_content);
                     return FALSE;
                 }
-            }            
+            }
         }
     }
     elsif ($fromType eq "CEPH") { ############################################ CEPH
@@ -416,7 +442,7 @@ sub copy {
             if (! defined $result) {
                 ERROR("Cannot download S3 object '$fromPath' to file $toPath");
                 return FALSE;
-            } 
+            }
             return TRUE;
         }
         elsif ($toType eq "S3") {
@@ -485,7 +511,7 @@ sub copy {
             my $resource = "/$containerName/$objectName";
 
             my $request = HTTP::Request->new(GET => $ENV{ROK4_SWIFT_PUBLICURL}.$resource);
-            
+
             # create folder
             my $dir = File::Basename::dirname($toPath);
             my $errors_list;
@@ -569,11 +595,11 @@ sub copy {
                     ERROR("HTTP decoded content : ", $response->decoded_content);
                     return FALSE;
                 }
-            }            
+            }
         }
     }
 
-    ERROR("copy $fromType : $fromPath -> $toType : $toPath not implemented.");   
+    ERROR("copy $fromType : $fromPath -> $toType : $toPath not implemented.");
     return FALSE;
 }
 
@@ -712,7 +738,7 @@ sub getData {
             }
         }
     } else {
-        ERROR("getData $type not implemented.");  
+        ERROR("getData $type not implemented.");
     }
 
     return undef;
@@ -786,7 +812,7 @@ sub setData {
         if (! $ok) {
             ERROR("Cannot upload S3 object '$bucketName / $objectName' content");
             return FALSE;
-        } 
+        }
         return TRUE;
     }
     elsif ($type eq "SWIFT") {
@@ -829,7 +855,7 @@ sub setData {
             }
         }
     } else {
-        ERROR("setData $type not implemented.");  
+        ERROR("setData $type not implemented.");
     }
 
 }
@@ -890,7 +916,10 @@ sub isPresent {
             prefix => $objectName
         });
 
-        if (scalar(@{$result->{keys}} == 0)) {
+        if (! defined $result) {
+            ERROR(sprintf "Cannot request S3 storage : %s (%s)", $S3->errstr, $S3->err);
+            return FALSE;
+        } elsif (scalar(@{$result->{keys}} == 0)) {
             return FALSE;
         } else {
             return TRUE;
@@ -1127,7 +1156,7 @@ sub remove {
         $request->header('Date' => $dateValue);
         $request->header('Content-Type' => $contentType);
         $request->header('Authorization' => sprintf ("AWS %s:$signature", $ENV{ROK4_S3_KEY}));
-         
+
         my $response = _getUserAgent()->request($request);
         if ($response->is_success) {
             return TRUE;
@@ -1160,7 +1189,7 @@ sub symLink {
 
     DEBUG("Symlink target '$targetType' path '$targetPath', link '$toType' path '$toPath'.");
 
-    if ($targetType eq "FILE" && $toType eq "FILE") {        
+    if ($targetType eq "FILE" && $toType eq "FILE") {
 
         # create folder
         my $dir = File::Basename::dirname($toPath);
@@ -1207,7 +1236,7 @@ sub symLink {
         if (! $ok) {
             ERROR("Cannot upload S3 object '$toBucketName / $toPath' content");
             return undef;
-        } 
+        }
         return $targetPath;
     }
     elsif ($targetType eq "SWIFT" && $toType eq "SWIFT") {
@@ -1381,7 +1410,7 @@ sub _getSwiftToken {
             ERROR("No token in the Keystone authentication response");
             ERROR(Dumper($response));
         }
-        
+
     } else {
         # Native swift authentication
         my $request = HTTP::Request::Common::GET(
@@ -1409,7 +1438,7 @@ sub _getSwiftToken {
         }
     }
 
-    return $SWIFT_TOKEN; 
+    return $SWIFT_TOKEN;
 };
 
 =begin nd
@@ -1479,7 +1508,7 @@ sub _getRealData {
 
             my $realTarget = qx(rados -p $poolName get $objectName /dev/stdout);
             chomp $realTarget;
-            
+
             if (index($realTarget, ROK4_SYMLINK_SIGNATURE) == -1) {
                 # L'objet est petit mais ne commence pas par la signature des objets symboliques
                 return $path;
