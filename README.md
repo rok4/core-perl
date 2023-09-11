@@ -58,6 +58,9 @@ Leur définition est contrôlée à l'usage.
     - `ROK4_S3_URL`
     - `ROK4_S3_KEY`
     - `ROK4_S3_SECRETKEY`
+    - (optionnel) `ROK4_S3_REGION`
+    - (optionnel) `ROK4_S3_AUTHENTICATION_METHOD`
+    - (optionnel) `ROK4_S3_USE_VIRTUAL_HOST`
 * Pour le stockage SWIFT
     - `ROK4_SWIFT_AUTHURL`
     - `ROK4_SWIFT_USER`

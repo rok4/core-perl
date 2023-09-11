@@ -10,6 +10,7 @@ WriteMakefile(
     # ack -h "^use [A-Z]" ./ | cut -d' ' -f2 | grep -v -E "ROK4::" | sed -r "s#;##" | sort | uniq | sed -r "s/(.+)/\"\1\" => 0,/"
     PREREQ_PM => {
         "Net::Amazon::S3" => 0,
+        "Net::Amazon::S3::Vendor::Generic" => 0,
         "Config::INI::Reader" => 0,
         "Cwd" => 0,
         "Data::Dumper" => 0,
