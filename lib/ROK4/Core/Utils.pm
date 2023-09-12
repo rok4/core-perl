@@ -40,7 +40,7 @@ File: Utils.pm
 
 Class: ROK4::Core::Utils
 
-(see libperlauto/Core_Utils.png)
+(see libperlauto/ROK4_Core_Utils.png)
 =cut
 
 ################################################################################

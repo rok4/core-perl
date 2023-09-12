@@ -40,7 +40,7 @@ File: Pixel.pm
 
 Class: ROK4::Core::Pixel
 
-(see libperlauto/Core_Pixel.png)
+(see libperlauto/ROK4_Core_Pixel.png)
 
 Store all pixel's intrinsic components.
 

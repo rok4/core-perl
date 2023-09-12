@@ -1,46 +1,49 @@
 # Librairies CORE Perl
 
-- [Dépendances](#dépendances)
-- [Installation](#installation)
-- [Utilisation en submodule GIT](#utilisation-en-submodule-git)
-- [Variables d'environnement utilisées dans les librairies](#variables-denvironnement-utilisées-dans-les-librairies)
+Ces librairies Perl sont utilisées par les outils de [prégénération](https://github.com/rok4/pregeneration) et ceux de [gestion et analyse](https://github.com/rok4/tools)
 
-## Dépendances
+## Installation depuis le paquet debian
 
-* Paquets debian
-    * perl-base
-    * libgdal-perl
-    * libpq-dev
-    * gdal-bin
-    * libfile-find-rule-perl
-    * libfile-copy-link-perl
-    * libconfig-ini-perl
-    * libdbi-perl
-    * libdbd-pg-perl
-    * libdevel-size-perl
-    * libdigest-sha-perl
-    * libfile-map-perl
-    * libfindbin-libs-perl
-    * libhttp-message-perl
-    * liblwp-protocol-https-perl
-    * libmath-bigint-perl
-    * libterm-progressbar-perl
-    * liblog-log4perl-perl
-    * libjson-parse-perl
-    * libjson-perl
-    * libjson-validator-perl
-    * libtest-simple-perl
-    * libxml-libxml-perl
-    * libamazon-s3-perl
+Télécharger le paquet sur GitHub : https://github.com/rok4/core-perl/releases/
 
-## Installation
+```
+apt install ./librok4-core-perl-<version>-linux-all.deb
+```
 
-`perl Makefile.PL INSTALL_BASE=/usr/local VERSION=0.0.1`
+## Installation depuis les sources
 
-## Utilisation en submodule GIT
+Dépendances (paquets debian) :
 
-* Si le dépôt de code est à côté : `git submodule add ../core-perl.git core`
-* Sinon : `git submodule add https://github.com/rok4/core-perl.git core`
+* perl-base
+* libgdal-perl
+* libpq-dev
+* gdal-bin
+* libfile-find-rule-perl
+* libfile-copy-link-perl
+* libconfig-ini-perl
+* libdbi-perl
+* libdbd-pg-perl
+* libdevel-size-perl
+* libdigest-sha-perl
+* libfile-map-perl
+* libfindbin-libs-perl
+* libhttp-message-perl
+* liblwp-protocol-https-perl
+* libmath-bigint-perl
+* libterm-progressbar-perl
+* liblog-log4perl-perl
+* libjson-parse-perl
+* libjson-perl
+* libjson-validator-perl
+* libtest-simple-perl
+* libxml-libxml-perl
+* libnet-amazon-s3-perl
+
+```
+perl Makefile.PL INSTALL_BASE=/usr PREREQ_FATAL=1
+make
+make install
+```
 
 ## Variables d'environnement utilisées dans les librairies
 
@@ -55,6 +58,8 @@ Leur définition est contrôlée à l'usage.
     - `ROK4_S3_URL`
     - `ROK4_S3_KEY`
     - `ROK4_S3_SECRETKEY`
+    - (optionnel) `ROK4_S3_REGION`
+    - (optionnel) `ROK4_S3_USE_VIRTUAL_HOST`
 * Pour le stockage SWIFT
     - `ROK4_SWIFT_AUTHURL`
     - `ROK4_SWIFT_USER`

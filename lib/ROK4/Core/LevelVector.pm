@@ -40,7 +40,7 @@ File: LevelVector.pm
 
 Class: ROK4::Core::LevelVector
 
-(see libperlauto/Core_LevelVector.png)
+(see libperlauto/ROK4_Core_LevelVector.png)
 
 Describe a level in a vector pyramid.
 
@@ -1084,13 +1084,24 @@ sub clone {
     my $clone = { %{ $this } };
     bless($clone, 'ROK4::Core::LevelVector');
 
-    if (defined $clone_root) {
-        # On est dans le cas d'un stockage fichier, et il faut modifier l'emplacement du descripteur et les dossiers image et masque
+    if ($this->{type} eq "FILE") {
         $clone->{dir_image} = File::Spec->catdir($clone_root, $clone_name, "DATA", $this->{id});
-        $clone->{desc_path} = $clone_root;
+        $clone->{desc_path} = $clone_root;            
     } else {
-        # On est dans le cas d'un stockage objet, et il faut modifier les préfixes des images et des fichiers
+        # Stockage Objet
+
         $clone->{prefix_image} = sprintf "%s/DATA_%s", $clone_name, $this->{id};
+
+        if ($this->{type} eq "S3") {
+            $clone->{bucket_name} = $clone_root;
+        }
+        elsif ($this->{type} eq "SWIFT") {
+            $clone->{container_name} = $clone_root;
+        }
+        elsif ($this->{type} eq "CEPH") {
+            $clone->{pool_name} = $clone_root;
+        }        
+        
     }
 
     return $clone;

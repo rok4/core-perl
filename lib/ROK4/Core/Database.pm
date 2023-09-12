@@ -40,7 +40,7 @@ File: Database.pm
 
 Class: ROK4::Core::Database
 
-(see libperlauto/Core_Database.png)
+(see libperlauto/ROK4_Core_Database.png)
 
 Allow to request a PostgreSQL database.
 
@@ -54,11 +54,6 @@ Using:
 
 Attributes:
     id - string - Connection identifier, concatenation of following values, used to caching results.
-    dbname - string - database name
-    host - string - PostgreSQL server host
-    port - integer - PostgreSQL server port
-    username - string - PostgreSQL server user
-    password - string - PostgreSQL server user's password
 
     connection - DBI database - PostgreSQL connection, use to execute requests
 
@@ -123,15 +118,7 @@ sub new {
 
     my $this = {
         id => "$dbname,$host,$port,$username,$password",
-
-        dbname => $dbname,
-        host => $host,
-        port => $port,
-        username => $username,
-        password => $password,
-
         connection => undef,
-
         current_results => undef
     };
 
@@ -997,6 +984,7 @@ Parameter (list):
     schema_name - string - Schema in which determine min and max
     table_name - string - Table in which determine min and max
     att_name - string - Attribute for which we want to determine min and max
+    filter - string - Optionnal, to limit considered tuples
 
 Return
     An array (min, max)
@@ -1006,16 +994,23 @@ sub get_min_max_values {
     my $schema_name = shift;
     my $table_name = shift;
     my $att_name = shift;
+    my $filter = shift;
 
-    if (exists $CACHE->{$this->{id}}->{get_min_max_values}->{$schema_name}->{$table_name}->{$att_name}) {
-        return @{$CACHE->{$this->{id}}->{get_min_max_values}->{$schema_name}->{$table_name}->{$att_name}};
+    my $sql;
+    if (defined $filter && $filter ne "") {
+        $sql = "SELECT min($att_name), max($att_name) FROM $schema_name.$table_name WHERE $filter;"
+    } else {
+        $sql = "SELECT min($att_name), max($att_name) FROM $schema_name.$table_name;";
+        $filter = "none";
     }
 
-    my $sql = sprintf "SELECT min($att_name), max($att_name) FROM $schema_name.$table_name;";
+    if (exists $CACHE->{$this->{id}}->{get_min_max_values}->{$schema_name}->{$table_name}->{$att_name}->{$filter}) {
+        return @{$CACHE->{$this->{id}}->{get_min_max_values}->{$schema_name}->{$table_name}->{$att_name}->{$filter}};
+    }
 
     my @line = $this->select_one_row($sql);
 
-    $CACHE->{$this->{id}}->{get_min_max_values}->{$schema_name}->{$table_name}->{$att_name} = [$line[0], $line[1]];
+    $CACHE->{$this->{id}}->{get_min_max_values}->{$schema_name}->{$table_name}->{$att_name}->{$filter} = [$line[0], $line[1]];
     return ($line[0], $line[1]);
 
 }
@@ -1027,6 +1022,7 @@ Parameter (list):
     schema_name - string - Schema in which count distinct values
     table_name - string - Table in which count distinct values
     att_name - string - Attribute for which we want to count distinct values
+    filter - string - Optionnal, to limit considered tuples
 
 Return
     Distinct values count
@@ -1036,16 +1032,23 @@ sub get_distinct_values_count {
     my $schema_name = shift;
     my $table_name = shift;
     my $att_name = shift;
+    my $filter = shift;
 
-    if (exists $CACHE->{$this->{id}}->{get_distinct_values_count}->{$schema_name}->{$table_name}->{$att_name}) {
-        return $CACHE->{$this->{id}}->{get_distinct_values_count}->{$schema_name}->{$table_name}->{$att_name};
+    my $sql;
+    if (defined $filter && $filter ne "") {
+        $sql = "SELECT count(*) FROM (SELECT DISTINCT $att_name FROM $schema_name.$table_name WHERE $filter) as tmp;"
+    } else {
+        $sql = "SELECT count(*) FROM (SELECT DISTINCT $att_name FROM $schema_name.$table_name) as tmp;";
+        $filter = "none";
     }
 
-    my $sql = sprintf "SELECT count(*) FROM (SELECT DISTINCT $att_name FROM $schema_name.$table_name) as tmp;";
+    if (exists $CACHE->{$this->{id}}->{get_distinct_values_count}->{$schema_name}->{$table_name}->{$att_name}->{$filter}) {
+        return $CACHE->{$this->{id}}->{get_distinct_values_count}->{$schema_name}->{$table_name}->{$att_name}->{$filter};
+    }
 
     my @line = $this->select_one_row($sql);
 
-    $CACHE->{$this->{id}}->{get_distinct_values_count}->{$schema_name}->{$table_name}->{$att_name} = $line[0];
+    $CACHE->{$this->{id}}->{get_distinct_values_count}->{$schema_name}->{$table_name}->{$att_name}->{filter} = $line[0];
     return $line[0];
 }
 
@@ -1057,6 +1060,7 @@ Parameter (list):
     schema_name - string - Schema in which list distinct values
     table_name - string - Table in which list distinct values
     att_name - string - Attribute for which we want to list distinct values
+    filter - string - Optionnal, to limit considered tuples
 
 Return
     Distinct values in an array, an empty array if failure
@@ -1066,14 +1070,22 @@ sub get_distinct_values {
     my $schema_name = shift;
     my $table_name = shift;
     my $att_name = shift;
+    my $filter = shift;
 
-    if (exists $CACHE->{$this->{id}}->{get_distinct_values}->{$schema_name}->{$table_name}->{$att_name}) {
-        return @{$CACHE->{$this->{id}}->{get_distinct_values}->{$schema_name}->{$table_name}->{$att_name}};
+    my $sql;
+    if (defined $filter && $filter ne "") {
+        $sql = "SELECT DISTINCT $att_name FROM $schema_name.$table_name WHERE $filter;"
+    } else {
+        $sql = "SELECT DISTINCT $att_name FROM $schema_name.$table_name;";
+        $filter = "none";
     }
 
-    my $sql = sprintf "SELECT DISTINCT $att_name FROM $schema_name.$table_name;";
+    if (exists $CACHE->{$this->{id}}->{get_distinct_values}->{$schema_name}->{$table_name}->{$att_name}->{$filter}) {
+        return @{$CACHE->{$this->{id}}->{get_distinct_values}->{$schema_name}->{$table_name}->{$att_name}->{$filter}};
+    }
 
     my $att_values = $this->select_all_row($sql);
+
     if ( ! defined $att_values) {
         ERROR("Cannot list distinct values of $att_name in $schema_name.$table_name");
         return ();
@@ -1087,7 +1099,7 @@ sub get_distinct_values {
         }
     }
 
-    $CACHE->{$this->{id}}->{get_distinct_values}->{$schema_name}->{$table_name}->{$att_name} = \@array;
+    $CACHE->{$this->{id}}->{get_distinct_values}->{$schema_name}->{$table_name}->{$att_name}->{$filter} = \@array;
     return @array;
 }
 

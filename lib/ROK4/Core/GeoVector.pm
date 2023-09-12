@@ -40,7 +40,7 @@ File: GeoVector.pm
 
 Class: ROK4::Core::GeoVector
 
-(see libperlauto/Core_GeoVector.png)
+(see libperlauto/ROK4_Core_GeoVector.png)
 
 Describes a georeferenced image and enable to know its components.
 

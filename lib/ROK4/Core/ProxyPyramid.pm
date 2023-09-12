@@ -40,7 +40,7 @@ File: ProxyPyramid.pm
 
 Class: ROK4::Core::ProxyPyramid
 
-(see libperlauto/Core_ProxyPyramid.png)
+(see libperlauto/ROK4_Core_ProxyPyramid.png)
 
 Proxy to load a pyramid, whatever the type (raster or vector)
 
