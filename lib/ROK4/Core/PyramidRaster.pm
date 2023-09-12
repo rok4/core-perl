@@ -470,6 +470,9 @@ sub _createFromXML {
     my @tmp = split(/_/, $format);
 
     $this->{compression} = lc($tmp[1]);
+    if ($this->{compression} eq "raw") {
+        $this->{compression} = "none"
+    }
     my $sampleformat = uc($tmp[2]);
 
     my $samplesperpixel = $root->findnodes('channels')->string_value();
@@ -610,6 +613,9 @@ sub _createFromJSON {
     my @tmp = split(/_/, $pyramid_json_object->{format});
 
     $this->{compression} = lc($tmp[1]);
+    if ($this->{compression} eq "raw") {
+        $this->{compression} = "none"
+    }
     my $sampleformat = uc($tmp[2]);
 
     if (! exists $pyramid_json_object->{raster_specifications}->{channels}) {
@@ -974,7 +980,13 @@ sub ownMasks {
 # Function: getFormatCode
 sub getFormatCode {
     my $this = shift;
-    return sprintf "TIFF_%s_%s", uc($this->{compression}), $this->{pixel}->getSampleFormatCode();
+
+    my $comp = $this->{compression};
+    if ($comp eq "none") {
+        $comp = "raw"
+    }
+
+    return sprintf "TIFF_%s_%s", uc($comp), $this->{pixel}->getSampleFormatCode();
 }
 
 # Function: getName
