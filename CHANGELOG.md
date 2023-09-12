@@ -1,18 +1,12 @@
-# Librairies ROK4 core Perl
-
-## Summary
-
-Corrections diverses
-
 ## Changelog
 
 ### [Fixed]
 
-* Ajout de points sur les côtés des bbox pour corriger leur reprojection
+* Indentification de la compression dans les formats "RAW"
 
-### [Changed]
+### [Added]
 
-* Ignore la casse sur les headers SWIFT lors de la récupération du token
+* Possibilité de préciser une région S3 et si on souhaite utiliser des hôtes virtuels (bucket en sous domaine)
 
 <!-- 
 ### [Added]
