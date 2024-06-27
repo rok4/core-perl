@@ -1,4 +1,11 @@
-## Changelog
+## 1.1.1
+
+### [Fixed]
+
+* `Database` : lorsque qu'un attribut dont on veut les valeurs distinctes correspond à du vocabulaire SQL, il faut le mettre entre double quote.
+* `TileMatrixSet` : pour chercher le niveau dont la résolution est la plus proche de celle fournie, on accepte des ratios entre 0.8 et 1.6 pour toujours avoir une solution avec les TMS quadtree
+
+## 1.1.0
 
 ### [Fixed]
 

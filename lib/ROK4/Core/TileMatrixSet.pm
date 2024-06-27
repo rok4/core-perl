@@ -640,7 +640,7 @@ sub getBestLevelID {
     # On cherche le niveau avec un ratio le plus proche de 1, ne sortant pas de [0.8, 1.5]
     while (my ($level, $tm) = each(%{$this->{tileMatrix}})) {
         my $ratio = $res / $tm->getResolution();
-        if ($ratio < 0.8 || $ratio > 1.5) {
+        if ($ratio < 0.8 || $ratio > 1.6) {
             next;
         }
         if (! defined $best_ratio || abs($ratio - 1) < abs($best_ratio - 1)) {

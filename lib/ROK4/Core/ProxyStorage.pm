@@ -787,8 +787,13 @@ sub setData {
             ERROR("CEPH path is not valid (<poolName>/<objectName>) : $path");
             return FALSE;
         }
-
-        if (system("echo -n '$data' | rados -p $poolName put $objectName /dev/stdin") != 0) {
+        
+        my $cmd = "json=\$(cat <<- EOF
+        $data
+        EOF
+        )
+        echo \$json | rados -p $poolName put $objectName /dev/stdin";
+        if (system($cmd) != 0) {
             ERROR("Cannot write to CEPH $poolName / $objectName : $!");
             return FALSE;
         }

@@ -1036,9 +1036,9 @@ sub get_distinct_values_count {
 
     my $sql;
     if (defined $filter && $filter ne "") {
-        $sql = "SELECT count(*) FROM (SELECT DISTINCT $att_name FROM $schema_name.$table_name WHERE $filter) as tmp;"
+        $sql = "SELECT count(*) FROM (SELECT DISTINCT \"$att_name\" FROM $schema_name.$table_name WHERE $filter) as tmp;"
     } else {
-        $sql = "SELECT count(*) FROM (SELECT DISTINCT $att_name FROM $schema_name.$table_name) as tmp;";
+        $sql = "SELECT count(*) FROM (SELECT DISTINCT \"$att_name\" FROM $schema_name.$table_name) as tmp;";
         $filter = "none";
     }
 
@@ -1074,9 +1074,9 @@ sub get_distinct_values {
 
     my $sql;
     if (defined $filter && $filter ne "") {
-        $sql = "SELECT DISTINCT $att_name FROM $schema_name.$table_name WHERE $filter;"
+        $sql = "SELECT DISTINCT \"$att_name\" FROM $schema_name.$table_name WHERE $filter;"
     } else {
-        $sql = "SELECT DISTINCT $att_name FROM $schema_name.$table_name;";
+        $sql = "SELECT DISTINCT \"$att_name\" FROM $schema_name.$table_name;";
         $filter = "none";
     }
 
