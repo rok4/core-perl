@@ -404,7 +404,7 @@ sub _createFromValues {
     }
 
     # NoData
-    if (! $this->{pixel}->validateNodata($params->{nodata})) {
+    if (! exists $params->{style} && ! $this->{pixel}->validateNodata($params->{nodata})) {
         ERROR ("Output nodata value is not consistent with pixel specifications");
         return FALSE;
     }
