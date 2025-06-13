@@ -998,9 +998,9 @@ sub get_min_max_values {
 
     my $sql;
     if (defined $filter && $filter ne "") {
-        $sql = "SELECT min($att_name), max($att_name) FROM $schema_name.$table_name WHERE $filter;"
+        $sql = "SELECT min(\"$att_name\"), max(\"$att_name\") FROM $schema_name.$table_name WHERE $filter;"
     } else {
-        $sql = "SELECT min($att_name), max($att_name) FROM $schema_name.$table_name;";
+        $sql = "SELECT min(\"$att_name\"), max(\"$att_name\") FROM $schema_name.$table_name;";
         $filter = "none";
     }
 

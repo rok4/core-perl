@@ -404,7 +404,7 @@ sub _createFromValues {
     }
 
     # NoData
-    if (! $this->{pixel}->validateNodata($params->{nodata})) {
+    if (! exists $params->{style} && ! $this->{pixel}->validateNodata($params->{nodata})) {
         ERROR ("Output nodata value is not consistent with pixel specifications");
         return FALSE;
     }
@@ -901,9 +901,6 @@ sub checkCompatibility {
     if ($this->getPixel()->getSampleFormat() ne $other->getPixel()->getSampleFormat()) {
         return 0;
     }
-    if ($this->getPixel()->getBitsPerSample() ne $other->getPixel()->getBitsPerSample()) {
-        return 0;
-    }
 
     # Photometric; samplesperpixel et compression peuvent être différent, on garde la compatibilité
     if ($this->getPixel()->getPhotometric() ne $other->getPixel()->getPhotometric()) {
@@ -986,7 +983,7 @@ sub getFormatCode {
         $comp = "raw"
     }
 
-    return sprintf "TIFF_%s_%s", uc($comp), $this->{pixel}->getSampleFormatCode();
+    return sprintf "TIFF_%s_%s", uc($comp), uc($this->{pixel}->getSampleFormat());
 }
 
 # Function: getName

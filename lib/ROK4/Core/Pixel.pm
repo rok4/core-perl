@@ -202,19 +202,7 @@ sub getPhotometric {
 # Function: getSampleFormat
 sub getSampleFormat {
     my $this = shift;
-    return $this->{sampleformat};
-}
-
-# Function: getSampleFormatCode
-sub getSampleFormatCode {
-    my $this = shift;
-    return sprintf "%s%s", uc($this->{sampleformat}), $this->{bitspersample};
-}
-
-# Function: getBitsPerSample
-sub getBitsPerSample {
-    my $this = shift;
-    return $this->{bitspersample};
+    return sprintf "%s%s", $this->{sampleformat}, $this->{bitspersample};
 }
 
 # Function: getSamplesPerPixel
@@ -229,10 +217,9 @@ sub equals {
     my $other = shift;
 
     return (
-        $this->{samplesperpixel} eq $other->getSamplesPerPixel() &&
-        $this->{sampleformat} eq $other->getSampleFormat() &&
-        $this->{photometric} eq $other->getPhotometric() &&
-        $this->{bitspersample} eq $other->getBitsPerSample()
+        $this->getSamplesPerPixel() eq $other->getSamplesPerPixel() &&
+        $this->getSampleFormat() eq $other->getSampleFormat() &&
+        $this->getPhotometric() eq $other->getPhotometric()
     );
 }
 
@@ -252,48 +239,12 @@ sub convertible {
         return TRUE;
     }
 
-
-    # La conversion se fait par la classe de la libimage PixelConverter, dont une instance est ajoutée à un FileImage pour convertir à la volée
-    # Les tests de faisabilité ici doivent être identiques à ceux dans PixelConverter :
-    # ----------------------------- PixelConverter constructor : C++ ----------------------------------
-    # if (inSampleFormat == SampleFormat::FLOAT || outSampleFormat == SampleFormat::FLOAT) {
-    #     BOOST_LOG_TRIVIAL(warning) << "PixelConverter doesn't handle float samples";
-    #     return;
-    # }
-    # if (inSampleFormat != outSampleFormat) {
-    #     BOOST_LOG_TRIVIAL(warning) << "PixelConverter doesn't handle different samples format";
-    #     return;
-    # }
-    # if (inBitsPerSample != outBitsPerSample) {
-    #     BOOST_LOG_TRIVIAL(warning) << "PixelConverter doesn't handle different number of bits per sample";
-    #     return;
-    # }
-
-    # if (inSamplesPerPixel == outSamplesPerPixel) {
-    #     BOOST_LOG_TRIVIAL(warning) << "PixelConverter have not to be used if number of samples per pixel is the same";
-    #     return;
-    # }
-
-    # if (inBitsPerSample != 8) {
-    #     BOOST_LOG_TRIVIAL(warning) << "PixelConverter only handle 8 bits sample";
-    #     return;
-    # }
-    # -------------------------------------------------------------------------------------------------
-
-    if ($this->getSampleFormat() eq "float" || $other->getSampleFormat() eq "float") {
+    if ($this->getSampleFormat() ne "uint8") {
         # aucune conversion pour des canaux flottant
         return FALSE;
     }
 
     if ($this->getSampleFormat() ne $other->getSampleFormat()) {
-        return FALSE;
-    }
-
-    if ($this->getBitsPerSample() != $other->getBitsPerSample()) {
-        return FALSE;
-    }
-
-    if ($this->getBitsPerSample() != 8) {
         return FALSE;
     }
 
