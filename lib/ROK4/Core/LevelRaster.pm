@@ -1027,7 +1027,7 @@ sub clone {
 
         $clone->{prefix_image} = sprintf "%s/DATA_%s", $clone_name, $this->{id};
         if (defined $clone->{prefix_mask}) {
-            $clone->{prefix_image} = sprintf "%s/MASK_%s", $clone_name, $this->{id};
+            $clone->{prefix_mask} = sprintf "%s/MASK_%s", $clone_name, $this->{id};
         }
 
         if ($this->{type} eq "S3") {
