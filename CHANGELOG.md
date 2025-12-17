@@ -1,3 +1,9 @@
+## 2.0.2
+
+### [Fixed]
+
+* `ProxyStorage` : le test d'existence d'un objet S3 se fait via la lecture du premier octet (le fonctionnement via préfixe n'est pas fiable).
+
 ## 2.0.0
 
 ### [Fixed]

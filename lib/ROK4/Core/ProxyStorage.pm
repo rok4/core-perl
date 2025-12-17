@@ -99,6 +99,7 @@ my $SWIFT_TOKEN = undef;
 ### S3
 my $S3_HOST = undef;
 my $S3 = undef;
+my $S3CLIENT = undef;
 
 ####################################################################################################
 #                             Group: Controls methods                                              #
@@ -211,6 +212,13 @@ sub checkEnvironmentVariables {
         }
 
         $S3 = Net::Amazon::S3->new (
+            host => $S3_HOST,
+            aws_access_key_id => $ENV{ROK4_S3_KEY},
+            aws_secret_access_key => $ENV{ROK4_S3_SECRETKEY},
+            vendor => $S3_VENDOR
+        );
+
+        $S3CLIENT = Net::Amazon::S3::Client->new (
             host => $S3_HOST,
             aws_access_key_id => $ENV{ROK4_S3_KEY},
             aws_secret_access_key => $ENV{ROK4_S3_SECRETKEY},
@@ -916,15 +924,10 @@ sub isPresent {
             return FALSE;
         }
 
-        my $result = $S3->list_bucket({
-            bucket => $bucketName,
-            prefix => $objectName
-        });
+        my $object = $S3CLIENT->bucket( name => $bucketName )->object( key => $objectName );
 
-        if (! defined $result) {
-            ERROR(sprintf "Cannot request S3 storage : %s (%s)", $S3->errstr, $S3->err);
-            return FALSE;
-        } elsif (scalar(@{$result->{keys}} == 0)) {
+        eval { $object->range ("bytes=0-1")->get; };
+        if ($@) {
             return FALSE;
         } else {
             return TRUE;
